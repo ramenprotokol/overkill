@@ -79,7 +79,7 @@ Run Durable Object (one per run) — owns the agent loop, one attempt per alarm 
 | `sim` | Blueprint → deterministic physics run → event log + trace hash. Same package in Worker and browser. | Rapier 2D (pinned) |
 | `trace` | Event log → attempt report: success, chain length, closest approach, first broken link, per-part touched/moved. Pure. | `sim` output |
 | `preview` | Static checks without simulating: overlaps, unsupported parts, "nothing within reach of domino 4". Pure. | `blueprint` |
-| `agent` | Opus tool-use loop: prompts, tools, attempt budget, stop rules, context trimming. | Anthropic API, `sim`, `trace`, `preview` |
+| `agent` | Opus tool-use loop: prompts, tools, attempt budget, stop rules, append-only history. | Anthropic API, `sim`, `trace`, `preview` |
 | `budget` | Daily run cap + per-visitor limit. | Durable Object storage |
 | `moderation` | Wordlist + one cheap classification call (Claude Haiku 4.5) before Opus sees the chore. | Anthropic API |
 | `store` | Save/load run records and gallery. | KV |
@@ -92,10 +92,10 @@ Run Durable Object (one per run) — owns the agent loop, one attempt per alarm 
 ## 7. Data flow
 
 1. Visitor submits chore + wager → Worker checks length, rate limit, daily budget, moderation → creates a Run Durable Object → returns run id → browser opens the SSE stream.
-2. The Run object calls Opus with: system prompt (rules, grid, parts kit, overkill rule), tool definitions, the chore marked as untrusted data. System prompt and tools are prompt-cached.
+2. The Run object calls Opus with: system prompt (rules, grid, parts kit, overkill rule), tool definitions, the chore marked as untrusted data. System prompt and tools are prompt-cached. Effort is set explicitly (start at `high`; the spike measures `medium` too). Opus 5.5 can't be forced to call a tool, so the loop checks that a call was made and nudges once if not.
 3. Opus may call `preview` (does not count as an attempt, max 3 per attempt so it can't stall the loop) and `simulate` (counts as an attempt).
 4. Each `simulate`: validate → run sim (fixed timestep, fixed step count, ~20 s simulated) → trace report + trace hash → stream attempt to watchers → return a ~300-token report to Opus.
-5. Context trimming: only the last 2 attempts are kept in full; older ones are summarized to one line each.
+5. History is append-only: Opus 5.5 rejects replayed reasoning when earlier turns change, so older attempts are never trimmed or rewritten. Attempt reports stay compact (~300 tokens) instead; 12 attempts fit comfortably in context.
 6. Loop ends on: success, attempt cap, Opus gives up, or a hard token/time ceiling.
 7. Run record saved to KV: chore, wager, every attempt's blueprint + report + note + trace hash, outcome, engine version.
 
@@ -140,7 +140,7 @@ Run Durable Object (one per run) — owns the agent loop, one attempt per alarm 
 - **Unit:** `blueprint` validation; `preview` checks; `trace` on hand-built event logs (success, near miss, broken chain, not-overkill-enough).
 - **Determinism:** same blueprint → identical trace hash across repeated runs and across the Worker and browser builds.
 - **Golden machines:** hand-built blueprints that must succeed with a known overkill score (regression guard for sim/trace changes).
-- **Agent:** loop logic against a mocked Opus — cap stop, give-up, invalid blueprint, API error, context trimming.
+- **Agent:** loop logic against a mocked Opus — cap stop, give-up, invalid blueprint, API error, append-only history (no earlier message is ever modified).
 - **Budget/moderation:** cap and rate-limit edges; refused chores don't consume budget.
 - **Eval (published):** a fixed 20-chore set run against real Opus 5.5 → success rate, attempt histogram, overkill scores, cost per run, p50/p95 wall-clock, and a "what Opus 5.5 is bad at" section with the ugliest failures.
 
