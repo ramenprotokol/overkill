@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { preview } from "../../src/core/preview.js";
+import { preview, findFloating, findUnreachable } from "../../src/core/preview.js";
 import { goldenDominoes } from "../fixtures/golden.js";
+import { FLOOR, type Body } from "../../src/core/geometry.js";
 
 const boardRow = (board: string, row: number) => board.split("\n")[1 + row]!;
 
@@ -51,5 +52,30 @@ describe("preview", () => {
     expect(p.ok).toBe(false);
     expect(p.errors.length).toBeGreaterThan(0);
     expect(p.board).toBe("");
+  });
+});
+
+describe("support and reach use real shapes", () => {
+  it("a tilted plank resting on a pillar under its low corner is not floating", () => {
+    const plank: Body = { id: "p1", kind: "plank", x: 5, y: 3, angle: Math.PI / 4, dynamic: true, shapes: [{ type: "box", x: 0, y: 0, hx: 1.5, hy: 0.1 }] };
+    // Lowest corner of that plank is at about (4.01, 1.869); a fixed pillar tops out exactly there.
+    const pillar: Body = { id: "x1", kind: "plank", x: 4.01, y: 1.3686, angle: 0, dynamic: false, shapes: [{ type: "box", x: 0, y: 0, hx: 0.2, hy: 0.5 }] };
+    expect(findFloating([FLOOR, pillar, plank])).toEqual([]);
+  });
+
+  it("the same plank with no pillar is floating", () => {
+    const plank: Body = { id: "p1", kind: "plank", x: 5, y: 3, angle: Math.PI / 4, dynamic: true, shapes: [{ type: "box", x: 0, y: 0, hx: 1.5, hy: 0.1 }] };
+    expect(findFloating([FLOOR, plank])).toEqual(["p1 starts floating — it will fall as soon as the machine starts"]);
+  });
+
+  it("a domino next to the lower end of a tall vertical plank is not unreachable", () => {
+    const domino: Body = { id: "d1", kind: "domino", x: 3.5, y: 0.8, angle: 0, dynamic: true, shapes: [{ type: "box", x: 0, y: 0, hx: 0.1, hy: 0.8 }] };
+    const pole: Body = { id: "p2", kind: "plank", x: 5, y: 3, angle: Math.PI / 2, dynamic: false, shapes: [{ type: "box", x: 0, y: 0, hx: 2, hy: 0.1 }] };
+    expect(findUnreachable([FLOOR, domino, pole])).toEqual([]);
+  });
+
+  it("a domino alone on the floor is unreachable", () => {
+    const domino: Body = { id: "d1", kind: "domino", x: 3.5, y: 0.8, angle: 0, dynamic: true, shapes: [{ type: "box", x: 0, y: 0, hx: 0.1, hy: 0.8 }] };
+    expect(findUnreachable([FLOOR, domino])).toEqual(["d1 has nothing within reach — when it falls it can't hit anything"]);
   });
 });

@@ -1,6 +1,6 @@
 import { GRID_COLS, GRID_ROWS, OVERLAP_TOLERANCE } from "./constants.js";
 import { parseBlueprint, type Blueprint } from "./blueprint.js";
-import { blueprintBodies, containsPoint, penetration, worldShapes, type Body, type WorldShape } from "./geometry.js";
+import { blueprintBodies, penetration, worldShapes, type Body, type WorldShape } from "./geometry.js";
 
 export interface PreviewResult {
   ok: boolean;
@@ -34,13 +34,19 @@ export function findOverlaps(bodies: Body[]): string[] {
   return out;
 }
 
+/** How far a part is nudged down to test whether anything holds it up. */
+const SUPPORT_PROBE = 0.05;
+/** A 1.6-tall domino falling sideways covers about this far either side of its centre. */
+const DOMINO_REACH = 1.7;
+
 /** Dominoes, buckets and loose planks with nothing under them. Balls may be dropped on purpose; seesaws hang on a pivot. */
 export function findFloating(bodies: Body[]): string[] {
   const out: string[] = [];
   for (const b of bodies) {
     if (!b.dynamic || b.kind === "ball" || b.kind === "seesaw") continue;
-    const probeY = Math.min(...worldShapes(b).map(bottomOf)) - 0.05;
-    const supported = bodies.some((o) => o.id !== b.id && worldShapes(o).some((s) => containsPoint(s, b.x, probeY)));
+    // Nudge the part down: if it now presses into anything, something is holding it up.
+    const lowered = worldShapes({ ...b, y: b.y - SUPPORT_PROBE });
+    const supported = bodies.some((o) => o.id !== b.id && worldShapes(o).some((s) => lowered.some((l) => penetration(l, s) > 0)));
     if (!supported) out.push(`${b.id} starts floating — it will fall as soon as the machine starts`);
   }
   return out;
@@ -51,15 +57,14 @@ export function findUnreachable(bodies: Body[]): string[] {
   const out: string[] = [];
   for (const d of bodies) {
     if (d.kind !== "domino") continue;
-    const near = bodies.some((o) => o.id !== d.id && o.kind !== "floor" && Math.abs(o.x - d.x) <= 1.7 && Math.abs(o.y - d.y) <= 1.6);
+    const [shape] = worldShapes(d);
+    if (!shape || shape.type !== "box") continue;
+    // The domino's own box, widened to everything it can sweep when it topples either way.
+    const reach: WorldShape = { ...shape, hx: DOMINO_REACH };
+    const near = bodies.some((o) => o.id !== d.id && o.kind !== "floor" && worldShapes(o).some((s) => penetration(reach, s) > 0));
     if (!near) out.push(`${d.id} has nothing within reach — when it falls it can't hit anything`);
   }
   return out;
-}
-
-function bottomOf(s: WorldShape): number {
-  if (s.type === "circle") return s.y - s.r;
-  return s.y - (s.hx * Math.abs(Math.sin(s.angle)) + s.hy * Math.abs(Math.cos(s.angle)));
 }
 
 const GLYPH = { ball: "o", domino: "|", plank: "=", seesaw: "^", bucket: "U" } as const;
