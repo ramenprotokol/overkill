@@ -42,4 +42,19 @@ describe("runSim", () => {
     expect(ENGINE).toBe(`@dimforge/rapier2d-deterministic-compat@${pkg.version}`);
     expect(runSim(goldenDominoes).engine).toBe(ENGINE);
   });
+
+  it("records contact intervals, including resting contacts, without the floor", () => {
+    const r = runSim(seesawDrop);
+    const c = r.contacts.find((x) => x.a === "b1" && x.b === "s1");
+    expect(c).toBeDefined();
+    expect(c!.from).toBeLessThanOrEqual(c!.to);
+    expect(r.contacts.every((x) => x.a < x.b && x.a !== "floor" && x.b !== "floor" && x.to <= r.steps)).toBe(true);
+  });
+
+  it("records when each part was moving", () => {
+    const r = runSim(goldenDominoes);
+    expect(r.moving.b1![0]![0]).toBe(0);
+    const hit = r.events.find((e) => e.a === "b1" && e.b === "d1")!;
+    expect(r.moving.d1![0]![0]).toBeGreaterThanOrEqual(hit.step - 1);
+  });
 });

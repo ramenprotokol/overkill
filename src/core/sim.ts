@@ -1,5 +1,5 @@
 import RAPIER, { type RigidBody } from "@dimforge/rapier2d-deterministic-compat";
-import { ENGINE, GRAVITY, MOVE_ANGULAR, MOVE_LINEAR, MOVE_WINDOW, PUSH_SPEED, SIM_STEPS, TIMESTEP } from "./constants.js";
+import { ENGINE, GRAVITY, MOVE_ANGULAR, MOVE_LINEAR, PUSH_SPEED, SIM_STEPS, TIMESTEP } from "./constants.js";
 import type { Blueprint } from "./blueprint.js";
 import { blueprintBodies } from "./geometry.js";
 import { fnv1a64 } from "./hash.js";
@@ -9,9 +9,6 @@ export interface SimEvent {
   /** Alphabetically first of the pair. */
   a: string;
   b: string;
-  /** Whether each side was moving at some point in the MOVE_WINDOW steps after the hit. */
-  aMoves: boolean;
-  bMoves: boolean;
 }
 
 export interface PartTrack {
@@ -19,6 +16,14 @@ export interface PartTrack {
   end: { x: number; y: number };
   moved: boolean;
   minDistToFinale: number;
+}
+
+/** Two things touching from step `from` until step `to` (`to` = the run's step count if still touching at the end). a < b; the floor is excluded. */
+export interface Contact {
+  a: string;
+  b: string;
+  from: number;
+  to: number;
 }
 
 export interface SimResult {
@@ -31,6 +36,10 @@ export interface SimResult {
   /** Fingerprint of what happened, for replay verification. */
   hash: string;
   engine: string;
+  /** Every contact interval, in the order the contacts began. */
+  contacts: Contact[];
+  /** Dynamic parts only: half-open step intervals [start, end) during which the part was moving. */
+  moving: Record<string, [number, number][]>;
 }
 
 let ready: Promise<void> | null = null;
@@ -82,7 +91,7 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS): SimResult {
     pushed.applyImpulse({ x: pushed.mass() * speed, y: 0 }, true);
 
     const dynamicIds = bodies.filter((b) => b.dynamic).map((b) => b.id);
-    const moving = new Map<string, boolean[]>(dynamicIds.map((id) => [id, []]));
+    const movingFlags = new Map<string, boolean[]>(dynamicIds.map((id) => [id, []]));
     const minDist = new Map<string, number>(dynamicIds.map((id) => [id, Infinity]));
     const start = new Map(dynamicIds.map((id) => {
       const t = rigid.get(id)!.translation();
@@ -90,39 +99,54 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS): SimResult {
     }));
     const raw: { step: number; a: string; b: string }[] = [];
     let finaleHit = null as SimResult["finaleHit"];
+    const open = new Map<string, { contact: Contact; count: number }>();
+    const contacts: Contact[] = [];
 
     for (let step = 0; step < steps; step++) {
       world.step(queue);
       queue.drainCollisionEvents((h1, h2, started) => {
-        if (!started) return;
         const n1 = nameOf.get(h1);
         const n2 = nameOf.get(h2);
         if (n1 === undefined || n2 === undefined || n1 === n2 || n1 === "floor" || n2 === "floor") return;
         const [a, b] = n1 < n2 ? [n1, n2] : [n2, n1];
-        raw.push({ step, a, b });
-        if (!finaleHit && (a === "finale" || b === "finale")) finaleHit = { step, by: a === "finale" ? b : a };
+        const key = `${a}|${b}`;
+        if (started) {
+          raw.push({ step, a, b });
+          if (!finaleHit && (a === "finale" || b === "finale")) finaleHit = { step, by: a === "finale" ? b : a };
+          const o = open.get(key);
+          if (o) o.count++;
+          else {
+            const contact: Contact = { a, b, from: step, to: steps };
+            contacts.push(contact);
+            open.set(key, { contact, count: 1 });
+          }
+        } else {
+          const o = open.get(key);
+          if (!o) return;
+          o.count--;
+          if (o.count === 0) {
+            o.contact.to = step;
+            open.delete(key);
+          }
+        }
       });
       for (const id of dynamicIds) {
         const body = rigid.get(id)!;
         const v = body.linvel();
-        moving.get(id)!.push(Math.hypot(v.x, v.y) > MOVE_LINEAR || Math.abs(body.angvel()) > MOVE_ANGULAR);
+        movingFlags.get(id)!.push(Math.hypot(v.x, v.y) > MOVE_LINEAR || Math.abs(body.angvel()) > MOVE_ANGULAR);
         const t = body.translation();
         minDist.set(id, Math.min(minDist.get(id)!, Math.hypot(t.x - finale.x, t.y - finale.y)));
       }
     }
 
-    const movesWithin = (id: string, from: number): boolean => {
-      const m = moving.get(id);
-      if (!m) return false; // fixed things never move
-      for (let s = from; s < Math.min(m.length, from + MOVE_WINDOW); s++) if (m[s]) return true;
-      return false;
-    };
-    const events: SimEvent[] = raw.map((e) => ({ ...e, aMoves: movesWithin(e.a, e.step), bMoves: movesWithin(e.b, e.step) }));
+    const events: SimEvent[] = raw.map((e) => ({ ...e }));
 
     const parts: Record<string, PartTrack> = {};
+    const moving: Record<string, [number, number][]> = {};
     for (const id of dynamicIds) {
       const t = rigid.get(id)!.translation();
-      parts[id] = { start: start.get(id)!, end: { x: t.x, y: t.y }, moved: moving.get(id)!.some(Boolean), minDistToFinale: minDist.get(id)! };
+      parts[id] = { start: start.get(id)!, end: { x: t.x, y: t.y }, moved: movingFlags.get(id)!.some(Boolean), minDistToFinale: minDist.get(id)! };
+      moving[id] = intervals(movingFlags.get(id)!);
     }
 
     const hash = fnv1a64(JSON.stringify({
@@ -130,9 +154,20 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS): SimResult {
       finaleHit,
       end: dynamicIds.map((id) => [id, round(parts[id]!.end.x), round(parts[id]!.end.y)]),
     }));
-    return { events, parts, finaleHit, steps, hash, engine: ENGINE };
+    return { events, parts, finaleHit, steps, hash, engine: ENGINE, contacts, moving };
   } finally {
     queue.free();
     world.free();
   }
+}
+
+function intervals(flags: boolean[]): [number, number][] {
+  const out: [number, number][] = [];
+  let start = -1;
+  flags.forEach((m, i) => {
+    if (m && start < 0) start = i;
+    if (!m && start >= 0) { out.push([start, i]); start = -1; }
+  });
+  if (start >= 0) out.push([start, flags.length]);
+  return out;
 }

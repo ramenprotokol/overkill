@@ -1,23 +1,25 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { initPhysics, runSim, type PartTrack, type SimEvent, type SimResult } from "../../src/core/sim.js";
+import { initPhysics, runSim, type Contact, type PartTrack, type SimResult } from "../../src/core/sim.js";
 import { analyze } from "../../src/core/trace.js";
 import { dudMachine, goldenDominoes, lazyRoll, shortChain } from "../fixtures/golden.js";
 
-const ev = (step: number, a: string, b: string, aMoves = true, bMoves = true): SimEvent => ({ step, a, b, aMoves, bMoves });
+type Spans = [number, number][];
+const touch = (a: string, b: string, from: number, to = from + 5): Contact => (a < b ? { a, b, from, to } : { a: b, b: a, from, to });
 const track = (moved: boolean, minDistToFinale = 5, endY = 0.5): PartTrack => ({
   start: { x: 0, y: 0 }, end: { x: 0, y: endY }, moved, minDistToFinale,
 });
-const sim = (events: SimEvent[], parts: Record<string, PartTrack>, finaleHit: SimResult["finaleHit"] = null): SimResult => ({
-  events, parts, finaleHit, steps: 1200, hash: "test", engine: "test",
+const sim = (contacts: Contact[], moving: Record<string, Spans>, parts: Record<string, PartTrack> = {}): SimResult => ({
+  events: [], contacts, moving,
+  parts: { ...Object.fromEntries(Object.entries(moving).map(([id, spans]) => [id, track(spans.length > 0)])), ...parts },
+  finaleHit: null, steps: 1200, hash: "test", engine: "test",
 });
-const allMoved = { b1: track(true), d1: track(true), d2: track(true), d3: track(true), d4: track(true), d5: track(true) };
+const idle: Record<string, Spans> = { b1: [], d1: [], d2: [], d3: [], d4: [], d5: [] };
 
 describe("analyze (hand-built traces)", () => {
   it("scores a full chain into the finale as success", () => {
     const r = analyze(goldenDominoes, sim(
-      [ev(1, "b1", "d1"), ev(2, "d1", "d2"), ev(3, "d2", "d3"), ev(4, "d3", "d4"), ev(5, "d4", "d5"), ev(6, "d5", "finale", true, false)],
-      allMoved,
-      { step: 6, by: "d5" },
+      [touch("b1", "d1", 10), touch("d1", "d2", 20), touch("d2", "d3", 30), touch("d3", "d4", 40), touch("d4", "d5", 50), touch("d5", "finale", 60)],
+      { b1: [[0, 100]], d1: [[10, 80]], d2: [[20, 90]], d3: [[30, 100]], d4: [[40, 110]], d5: [[50, 120]] },
     ));
     expect(r.outcome).toBe("success");
     expect(r.success).toBe(true);
@@ -27,14 +29,14 @@ describe("analyze (hand-built traces)", () => {
   });
 
   it("calls a short chain that reaches the finale not overkill enough", () => {
-    const r = analyze(goldenDominoes, sim([ev(1, "b1", "d1"), ev(2, "d1", "finale", true, false)], allMoved, { step: 2, by: "d1" }));
+    const r = analyze(goldenDominoes, sim([touch("b1", "d1", 10), touch("d1", "finale", 20)], { ...idle, b1: [[0, 50]], d1: [[10, 60]] }));
     expect(r.outcome).toBe("not_overkill");
     expect(r.overkillScore).toBe(0);
     expect(r.summary).toBe("Not overkill enough: b1 → d1 → finale is a 2-part chain; it needs at least 5.");
   });
 
   it("does not credit a finale hit by a part the chain never reached", () => {
-    const r = analyze(goldenDominoes, sim([ev(1, "b1", "d1")], allMoved, { step: 9, by: "d3" }));
+    const r = analyze(goldenDominoes, sim([touch("b1", "d1", 10), touch("d3", "finale", 9)], { ...idle, b1: [[0, 50]], d1: [[10, 60]], d3: [[0, 40]] }));
     expect(r.outcome).toBe("not_overkill");
     expect(r.chain).toEqual(["d3"]);
     expect(r.summary).toBe("Not overkill enough: d3 hit the finale on its own, before the chain reached it.");
@@ -42,9 +44,8 @@ describe("analyze (hand-built traces)", () => {
 
   it("does not credit a part that hit the finale before the chain reached it", () => {
     const r = analyze(goldenDominoes, sim(
-      [ev(1, "d4", "finale", true, false), ev(10, "b1", "d1"), ev(20, "d1", "d2"), ev(30, "d2", "d3"), ev(40, "d3", "d4")],
-      allMoved,
-      { step: 1, by: "d4" },
+      [touch("d4", "finale", 1), touch("b1", "d1", 10), touch("d1", "d2", 20), touch("d2", "d3", 30), touch("d3", "d4", 40)],
+      { ...idle, b1: [[0, 100]], d1: [[10, 100]], d2: [[20, 100]], d3: [[30, 100]], d4: [[1, 5], [40, 100]] },
     ));
     expect(r.outcome).toBe("not_overkill");
     expect(r.success).toBe(false);
@@ -54,29 +55,53 @@ describe("analyze (hand-built traces)", () => {
 
   it("credits a part that joined the chain on the same step it hit the finale", () => {
     const r = analyze(goldenDominoes, sim(
-      [ev(1, "b1", "d1"), ev(2, "d1", "d2"), ev(3, "d2", "d3"), ev(4, "d3", "d4"), ev(5, "d4", "d5"), ev(5, "d5", "finale", true, false)],
-      allMoved,
-      { step: 5, by: "d5" },
+      [touch("b1", "d1", 1), touch("d1", "d2", 2), touch("d2", "d3", 3), touch("d3", "d4", 4), touch("d4", "d5", 5), touch("d5", "finale", 5)],
+      { b1: [[0, 50]], d1: [[1, 50]], d2: [[2, 50]], d3: [[3, 50]], d4: [[4, 50]], d5: [[5, 50]] },
     ));
     expect(r.outcome).toBe("success");
     expect(r.chain).toEqual(["b1", "d1", "d2", "d3", "d4", "d5"]);
   });
 
-  it("only extends the chain when the hit part actually moves", () => {
-    const r = analyze(goldenDominoes, sim([ev(1, "b1", "d1", true, false)], { ...allMoved, d1: track(false) }));
+  it("follows same-step contacts in causal order, whatever order the engine reports them in", () => {
+    const r = analyze(goldenDominoes, sim(
+      [touch("b1", "d1", 1), touch("d1", "d2", 2), touch("d3", "d4", 5), touch("d2", "d3", 5), touch("d4", "finale", 6)],
+      { ...idle, b1: [[0, 50]], d1: [[1, 50]], d2: [[2, 50]], d3: [[5, 50]], d4: [[5, 50]] },
+    ));
+    expect(r.outcome).toBe("success");
+    expect(r.chain).toEqual(["b1", "d1", "d2", "d3", "d4"]);
+  });
+
+  it("lets a part already resting on a chain part join when it gets launched", () => {
+    // b2 settles on the seesaw at step 3; the pushed ball lands on the seesaw at 100 and b2 is flung at 101.
+    const r = analyze(goldenDominoes, sim(
+      [touch("b2", "s1", 3, 200), touch("b1", "s1", 100)],
+      { b1: [[0, 110]], s1: [[100, 150]], b2: [[0, 3], [101, 180]] },
+    ));
+    expect(r.chain).toEqual(["b1", "s1", "b2"]);
+    expect(r.stoppedAt).toBe("b2");
+  });
+
+  it("does not let a part that was already moving on its own join the chain", () => {
+    const r = analyze(goldenDominoes, sim([touch("b1", "d1", 10), touch("b2", "d1", 50)], { b1: [[0, 100]], d1: [[10, 80]], b2: [[0, 300]] }));
+    expect(r.chain).toEqual(["b1", "d1"]);
+  });
+
+  it("only extends the chain when the touched part actually starts moving", () => {
+    const r = analyze(goldenDominoes, sim([touch("b1", "d1", 10)], { ...idle, b1: [[0, 50]] }));
     expect(r.outcome).toBe("missed");
     expect(r.chain).toEqual(["b1"]);
     expect(r.stoppedAt).toBe("b1");
   });
 
-  it("respects event order: a hit before a part joined the chain does not count", () => {
-    const r = analyze(goldenDominoes, sim([ev(5, "d1", "d2"), ev(10, "b1", "d1")], allMoved));
+  it("ignores a contact that ended before the chain reached either part", () => {
+    const r = analyze(goldenDominoes, sim([touch("d1", "d2", 5, 8), touch("b1", "d1", 10)], { ...idle, b1: [[0, 50]], d1: [[10, 50]], d2: [[6, 20]] }));
     expect(r.chain).toEqual(["b1", "d1"]);
   });
 
   it("reports where a miss stopped, what came closest, what never moved and what fell off", () => {
     const r = analyze(goldenDominoes, sim(
-      [ev(10, "b1", "d1"), ev(20, "d1", "d2")],
+      [touch("b1", "d1", 10), touch("d1", "d2", 20)],
+      { ...idle, b1: [[0, 100]], d1: [[10, 60]], d2: [[20, 70]] },
       { b1: track(true, 5, -3), d1: track(true, 3.2), d2: track(true, 1.44), d3: track(false, 0.9), d4: track(false), d5: track(false) },
     ));
     expect(r.outcome).toBe("missed");

@@ -1,6 +1,16 @@
-import { MIN_CHAIN_PARTS } from "./constants.js";
+import { MIN_CHAIN_PARTS, MOVE_WINDOW } from "./constants.js";
 import type { Blueprint } from "./blueprint.js";
 import type { SimResult } from "./sim.js";
+
+/** First step in [from, to] at which the part was moving, if any. */
+function firstMovingIn(sim: SimResult, id: string, from: number, to: number): number | undefined {
+  let first: number | undefined;
+  for (const [start, end] of sim.moving[id] ?? []) {
+    const t = Math.max(from, start);
+    if (t < end && t <= to && (first === undefined || t < first)) first = t;
+  }
+  return first;
+}
 
 export type Outcome = "success" | "not_overkill" | "missed";
 
@@ -23,28 +33,50 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
   const root = bp.firstPush.ball;
   // parent[x] = the chain part that set x off (null for the pushed ball). Map order = order parts joined.
   const parent = new Map<string, string | null>([[root, null]]);
-  // joinedAt[x] = the step at which x became part of the chain (-1 for the pushed ball).
   const joinedAt = new Map<string, number>([[root, -1]]);
-  for (const e of sim.events) {
-    if (parent.has(e.a) && !parent.has(e.b) && e.b in sim.parts && e.bMoves) {
-      parent.set(e.b, e.a);
-      joinedAt.set(e.b, e.step);
-    } else if (parent.has(e.b) && !parent.has(e.a) && e.a in sim.parts && e.aMoves) {
-      parent.set(e.a, e.b);
-      joinedAt.set(e.a, e.step);
+
+  // Grow the chain earliest-first until nothing else can join. A part joins from a chain part it is touching —
+  // a fresh hit or a resting contact — when it starts moving during that contact or within MOVE_WINDOW steps after.
+  // Parts already moving on their own can't join: they have no new start.
+  for (;;) {
+    let next: { id: string; from: string; step: number } | null = null;
+    for (const c of sim.contacts) {
+      for (const [x, y] of [[c.a, c.b], [c.b, c.a]] as const) {
+        const xJoined = joinedAt.get(x);
+        if (xJoined === undefined || joinedAt.has(y) || !(y in sim.parts)) continue;
+        const from = Math.max(c.from, xJoined);
+        if (from > c.to) continue;
+        const onset = (sim.moving[y] ?? []).map(([start]) => start).find((s) => s >= from && s <= c.to + MOVE_WINDOW);
+        if (onset === undefined) continue;
+        const better = !next || onset < next.step || (onset === next.step && (y < next.id || (y === next.id && x < next.from)));
+        if (better) next = { id: y, from: x, step: onset };
+      }
     }
+    if (!next) break;
+    parent.set(next.id, next.from);
+    joinedAt.set(next.id, next.step);
   }
+
   const pathTo = (id: string): string[] => {
     const path: string[] = [];
     for (let cur: string | null | undefined = id; cur; cur = parent.get(cur)) path.unshift(cur);
     return path;
   };
 
-  const hitBy = sim.finaleHit?.by ?? null;
-  // A part only counts as "in the chain" for the finale hit if it had already joined
-  // the chain by the step the finale was hit — joining later means the chain reached
-  // it too late to take credit for a hit that already happened.
-  const hitByChain = hitBy !== null && sim.finaleHit !== null && (joinedAt.get(hitBy) ?? Infinity) <= sim.finaleHit.step;
+  // The chore happens the first time a moving part touches the finale; resting against it doesn't count.
+  // It only counts for the machine if that part had already joined the chain by then.
+  let trigger: { by: string; step: number; inChain: boolean } | null = null;
+  for (const c of sim.contacts) {
+    if (c.a !== "finale" && c.b !== "finale") continue;
+    const p = c.a === "finale" ? c.b : c.a;
+    const step = firstMovingIn(sim, p, c.from, c.to);
+    if (step === undefined) continue;
+    const inChain = (joinedAt.get(p) ?? Infinity) <= step;
+    const better = !trigger || step < trigger.step || (step === trigger.step && (inChain !== trigger.inChain ? inChain : p < trigger.by));
+    if (better) trigger = { by: p, step, inChain };
+  }
+  const hitBy = trigger?.by ?? null;
+  const hitByChain = trigger?.inChain ?? false;
   let chain: string[];
   let outcome: Outcome;
   if (hitBy !== null && hitByChain) {
