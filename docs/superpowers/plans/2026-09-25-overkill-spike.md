@@ -1965,7 +1965,7 @@ import type { AttemptReport } from "../../src/core/trace.js";
 import { percentile, renderMarkdown, summarize } from "../../src/spike/summary.js";
 
 const run = (outcome: RunOutcome, attempts: number, wallMs = 60_000, score = 6): RunRecord => ({
-  chore: "turn off the light", outcome, previews: 0, turns: attempts, wallMs,
+  chore: "turn off the light", outcome, previews: 0, turns: attempts, truncations: 0, wallMs,
   model: "claude-opus-5-5", effort: "high", engine: "test",
   usage: { input: 10_000, output: 5_000, cacheWrite: 0, cacheRead: 0 },
   attempts: Array.from({ length: attempts }, (_, i) => ({
@@ -2017,6 +2017,7 @@ describe("renderMarkdown", () => {
     const runs = [run("success", 3), run("gave_up", 4)];
     const md = renderMarkdown(summarize(runs), runs, { model: "claude-opus-5-5", effort: "high", maxAttempts: 12 });
     expect(md).toContain("- Verdict: **SHIP_AS_STRUGGLE**");
+    expect(md).toContain("| Truncated replies | 0 |");
     expect(md).toContain("| turn off the light | success | 3 | 6 | 60 s | $0.140 |");
   });
 });
@@ -2082,6 +2083,8 @@ export interface SpikeSummary {
   attemptHistogram: Record<number, number>;
   outcomes: Record<string, number>;
   meanOverkill: number | null;
+  /** Replies cut off by max_tokens, summed over all runs. */
+  truncations: number;
   verdict: "GO" | "SHIP_AS_STRUGGLE" | "CHANGE_INTERFACE";
   reasons: string[];
 }
@@ -2134,6 +2137,7 @@ export function summarize(runs: RunRecord[]): SpikeSummary {
     attemptHistogram,
     outcomes,
     meanOverkill: scores.length > 0 ? mean(scores) : null,
+    truncations: runs.reduce((a, r) => a + r.truncations, 0),
     verdict,
     reasons,
   };
@@ -2155,6 +2159,7 @@ export function renderMarkdown(s: SpikeSummary, runs: RunRecord[], meta: { model
     `| Run time p50 / p95 | ${sec(s.p50WallMs)} / ${sec(s.p95WallMs)} |`,
     `| Cost per run (mean) | $${s.meanCostUsd.toFixed(3)} |`,
     `| Total cost | $${s.totalCostUsd.toFixed(2)} |`,
+    `| Truncated replies | ${s.truncations} |`,
     "",
     "## Attempts to success",
     "",
@@ -2208,7 +2213,8 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   const client = new Anthropic({ apiKey });
-  const api: MessagesApi = { messages: { create: (body) => client.messages.create(body) } };
+  // Stream: replies can be long (max_tokens 64000 covers thinking), and streaming avoids HTTP timeouts.
+  const api: MessagesApi = { messages: { create: (body) => client.messages.stream(body).finalMessage() } };
   await initPhysics();
 
   const limit = Number(values.limit);
@@ -2235,7 +2241,7 @@ async function main(): Promise<void> {
     spent += costUsd(run.usage);
     runs.push(run);
     appendFileSync(join(dir, "runs.jsonl"), JSON.stringify(run) + "\n");
-    console.log(`  → ${run.outcome} in ${run.attempts.length} attempt(s), ${(run.wallMs / 1000).toFixed(0)} s, $${costUsd(run.usage).toFixed(3)}, cache reads ${run.usage.cacheRead} tokens`);
+    console.log(`  → ${run.outcome} in ${run.attempts.length} attempt(s), ${(run.wallMs / 1000).toFixed(0)} s, $${costUsd(run.usage).toFixed(3)}, cache reads ${run.usage.cacheRead} tokens, ${run.truncations} truncated`);
   }
 
   const summary = summarize(runs);
@@ -2363,3 +2369,5 @@ Approved by the controller after task reviews; the code and tests on `feat/spike
 5. **Task 4/5 — round 4 (settling and motion):** the sim settles the machine under gravity for `SETTLE_STEPS = 60` steps before the push (settling steps are numbered negative; the push is step 0). A part counts as moving when `|v| + |ω|·bodyRadius > MOVE_SPEED (0.2)` — one threshold for every part, measured at its fastest point (`MOVE_LINEAR`/`MOVE_ANGULAR` removed). A part may be seen moving up to `JOIN_SLACK = 2` steps before its parent; nothing joins before step 0; parent ties go to the earliest-joined parent. `seesawDrop` drops its ball from row 0; new real-physics fixture `neighbourBalls`. Task 6's prompt says the machine settles for one second before the push.
 6. **Task 6 — prompt accuracy (after review):** the system prompt gives the finale its own section (top-level object, not a `parts` entry), states that only the first moving touch of the finale counts (an outside touch, even while settling, makes the run not overkill enough), rewords the on-its-own rule ("movement a part makes on its own — falling, rolling, settling — never adds it to the chain"), states field limits (note ≤ 140, label ≤ 60), says "neighbouring columns (1 metre apart)", and mentions the unreachable-domino warning. `userPrompt(chore, maxAttempts, maxPreviews)` states the preview allowance. `parseBlueprint` rejects the reserved ids `finale` and `floor`.
 7. **Task 7 — loop:** passes `maxPreviews` to `userPrompt`; default `maxTurns` is 60 (12 attempts × (3 previews + 1 simulate) fits).
+8. **Task 7 — loop hardening (after review):** `max_tokens` 64000 (callers stream); `RunRecord.truncations` counts cut-off replies; an empty reply ends the run as `gave_up`; default `maxTurns = maxAttempts × (maxPreviews + 1) + 12`; API error text is the SDK message alone.
+9. **Task 8 — CLI/summary:** the CLI calls `client.messages.stream(body).finalMessage()`; `SpikeSummary.truncations` totals cut-off replies and the markdown report shows it; the per-run console line prints truncations.
