@@ -18,6 +18,16 @@ describe("parseSpikeOptions", () => {
     expect(() => parseSpikeOptions(withFlag("max-cost", value))).toThrow("--max-cost");
   });
 
+  it.each(["1.99", "1", "0.5"])("rejects --max-cost %j, below the most one call can cost", (value) => {
+    expect(() => parseSpikeOptions(withFlag("max-cost", value))).toThrow(
+      `--max-cost must be at least $2, the most one call can cost (got "${value}")`,
+    );
+  });
+
+  it("accepts --max-cost equal to the most one call can cost", () => {
+    expect(parseSpikeOptions(withFlag("max-cost", "2")).maxCost).toBe(2);
+  });
+
   it("names the flag, the accepted range and the bad value", () => {
     expect(() => parseSpikeOptions(withFlag("max-cost", "$5"))).toThrow(
       '--max-cost must be a positive number of US dollars, like 30 (got "$5")',

@@ -31,7 +31,22 @@ export interface ReportMeta {
   /** The chore that was running when the cap hit, if any. */
   cutOff: string | null;
   stoppedByCap: boolean;
+  /** The API rejected a request (400/401/403), so the spike stopped early. */
+  stoppedByApiError: boolean;
 }
+
+/** Why the verdict can't be trusted yet; empty when it can. */
+export function provisionalCauses(runs: RunRecord[], meta: Pick<ReportMeta, "stoppedByCap" | "stoppedByApiError">): string[] {
+  const apiErrors = runs.filter((r) => r.outcome === "api_error").length;
+  return [
+    ...(meta.stoppedByCap ? ["the cost cap stopped the spike"] : []),
+    ...(meta.stoppedByApiError ? ["an API rejection stopped the spike"] : []),
+    ...(apiErrors > 0 ? [`${apiErrors} run${apiErrors === 1 ? "" : "s"} ended in an API error`] : []),
+  ];
+}
+
+/** A run abandoned by the per-call timeout: the slowest kind of run, so it must count toward run time. */
+const timedOut = (r: RunRecord) => r.error?.startsWith("call timed out") === true;
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const sec = (ms: number) => `${(ms / 1000).toFixed(0)} s`;
@@ -55,8 +70,9 @@ export function median(values: number[]): number {
 export function summarize(runs: RunRecord[], planned = runs.length): SpikeSummary {
   const ok = runs.filter((r) => r.outcome === "success");
   const attemptsToSuccess = ok.map((r) => r.attempts.length);
-  // An api_error run stopped on the network, not on the model, so its time says nothing about run time.
-  const walls = runs.filter((r) => r.outcome !== "api_error").map((r) => r.wallMs);
+  // An api_error run stopped on the network, not on the model, so its time says nothing about run time. A timed-out
+  // run is the exception: it was the slowest, and leaving it out would flatter the run-time gate.
+  const walls = runs.filter((r) => r.outcome !== "api_error" || timedOut(r)).map((r) => r.wallMs);
   const costs = runs.map((r) => costUsd(r.usage));
   const scores = ok.map((r) => r.attempts.at(-1)?.report?.overkillScore ?? 0);
 
@@ -97,16 +113,23 @@ export function summarize(runs: RunRecord[], planned = runs.length): SpikeSummar
 }
 
 export function renderMarkdown(s: SpikeSummary, runs: RunRecord[], meta: ReportMeta): string {
-  const capNote = meta.stoppedByCap
+  const stopNote = meta.stoppedByCap
     ? ` — stopped by the $${meta.maxCost} cost cap${meta.cutOff !== null ? `, cut off during "${meta.cutOff}"` : ""}; this verdict is provisional`
-    : "";
+    : meta.stoppedByApiError
+      ? " — stopped by an API rejection; this verdict is provisional"
+      : "";
+  const causes = provisionalCauses(runs, meta);
+  const verdict =
+    s.runs === 0
+      ? "**NO VERDICT** — no runs completed"
+      : `**${s.verdict}**${causes.length > 0 ? ` (provisional: ${causes.join("; ")})` : ""}${s.reasons.length > 0 ? ` — ${s.reasons.join("; ")}` : ""}`;
   const errors = runs.filter((r) => r.error !== undefined);
   const lines = [
     "# OVERKILL spike results",
     "",
     `- Model: \`${meta.model}\` (effort \`${meta.effort}\`), attempt cap ${meta.maxAttempts}`,
-    `- Coverage: ${s.runs} of ${meta.planned} chores${capNote}`,
-    `- Verdict: **${s.verdict}**${s.reasons.length > 0 ? ` — ${s.reasons.join("; ")}` : ""}`,
+    `- Coverage: ${s.runs} of ${meta.planned} chores${stopNote}`,
+    `- Verdict: ${verdict}`,
     "",
     "| Metric | Value |",
     "|---|---|",

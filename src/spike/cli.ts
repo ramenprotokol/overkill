@@ -8,7 +8,7 @@ import { initPhysics } from "../core/sim.js";
 import { createCappedApi, PartialUsageError, WORST_CALL_USD, type StreamCall } from "./capped-api.js";
 import { CHORES } from "./chores.js";
 import { parseSpikeOptions, type SpikeOptions } from "./options.js";
-import { renderMarkdown, summarize } from "./summary.js";
+import { provisionalCauses, renderMarkdown, summarize, type ReportMeta } from "./summary.js";
 
 function readOptions(): SpikeOptions {
   const { values } = parseArgs({
@@ -47,7 +47,8 @@ async function main(): Promise<void> {
   const client = new Anthropic({ apiKey, authToken: null, baseURL: "https://api.anthropic.com" });
 
   // Stream: replies can be long (max_tokens 64000 covers thinking), and streaming avoids HTTP timeouts. If the stream
-  // dies midway, the usage the SDK already received is handed to the adapter so it still counts against the cap.
+  // dies midway, the SDK's usage snapshot (real input counts, output not yet reported) is handed to the adapter, which
+  // charges it with a full max_tokens of output so it still counts against the cap.
   const stream: StreamCall = async (body, signal) => {
     const s = client.messages.stream(body, { signal });
     try {
@@ -70,20 +71,19 @@ async function main(): Promise<void> {
   const runs: RunRecord[] = [];
   let cutOff: string | null = null;
   let stoppedByCap = false;
-  const writeSummary = () =>
-    writeFileSync(
-      summaryPath,
-      renderMarkdown(summarize(runs, planned.length), runs, {
-        model: runs[0]?.model ?? DEFAULT_MODEL,
-        effort: opts.effort,
-        maxAttempts: opts.maxAttempts,
-        planned: planned.length,
-        maxCost: opts.maxCost,
-        spentUsd: capped.spent(),
-        cutOff,
-        stoppedByCap,
-      }),
-    );
+  let stoppedByApiError = false;
+  const meta = (): ReportMeta => ({
+    model: runs[0]?.model ?? DEFAULT_MODEL,
+    effort: opts.effort,
+    maxAttempts: opts.maxAttempts,
+    planned: planned.length,
+    maxCost: opts.maxCost,
+    spentUsd: capped.spent(),
+    cutOff,
+    stoppedByCap,
+    stoppedByApiError,
+  });
+  const writeSummary = () => writeFileSync(summaryPath, renderMarkdown(summarize(runs, planned.length), runs, meta()));
 
   for (const chore of planned) {
     if (capped.spent() + WORST_CALL_USD > opts.maxCost) {
@@ -115,14 +115,19 @@ async function main(): Promise<void> {
     writeSummary();
 
     if (run.outcome === "api_error" && /^(400|401|403)\b/.test(run.error ?? "")) {
+      stoppedByApiError = true;
       console.log(`Stopping: the API rejected the request (${run.error}). Fix the key or request before re-running.`);
       break;
     }
   }
 
   writeSummary();
-  const verdict = summarize(runs, planned.length).verdict;
-  console.log(`\nVerdict: ${verdict}${stoppedByCap ? " (provisional: stopped by the cost cap)" : ""}. Spent $${capped.spent().toFixed(2)}. Summary: ${summaryPath}`);
+  const causes = provisionalCauses(runs, meta());
+  const verdict =
+    runs.length === 0
+      ? "NO VERDICT (no runs completed)"
+      : `${summarize(runs, planned.length).verdict}${causes.length > 0 ? ` (provisional: ${causes.join("; ")})` : ""}`;
+  console.log(`\nVerdict: ${verdict}. Spent $${capped.spent().toFixed(2)}. Summary: ${summaryPath}`);
 }
 
 main().catch((e: unknown) => {

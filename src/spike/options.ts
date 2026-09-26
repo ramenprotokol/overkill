@@ -1,4 +1,5 @@
 import type { Effort } from "../agent/loop.js";
+import { WORST_CALL_USD } from "./capped-api.js";
 import { CHORES } from "./chores.js";
 
 export interface SpikeOptions {
@@ -31,6 +32,10 @@ export function parseSpikeOptions(raw: { limit: string; effort: string; attempts
   const maxCost = toNumber(raw["max-cost"]);
   if (!Number.isFinite(maxCost) || maxCost <= 0) {
     throw new Error(`--max-cost must be a positive number of US dollars, like 30 (got "${raw["max-cost"]}")`);
+  }
+  // Below one worst-case call the spike could never make a call, so it would run nothing.
+  if (maxCost < WORST_CALL_USD) {
+    throw new Error(`--max-cost must be at least $${WORST_CALL_USD}, the most one call can cost (got "${raw["max-cost"]}")`);
   }
 
   const effort = EFFORTS.find((e) => e === raw.effort);

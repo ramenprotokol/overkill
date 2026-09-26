@@ -28,7 +28,15 @@ npm run spike -- --limit 2 --max-cost 10   # smoke test
 npm run spike                               # all 20 chores, cost cap $30
 ```
 
-The spike stops making calls before the next call could take spending past the cap (`--max-cost`, default $30). A run cut off by the cap is reported separately and the verdict is marked provisional.
+The spike stops making calls before the next call could take spending past the cap (`--max-cost`, default $30, minimum $2). Before each call it assumes the worst: at least $2, and more once a conversation gets long (the previous reply's tokens plus 20k, all priced as cache writes, plus a full 64k-token reply).
+
+What counts toward the cap:
+
+- A finished reply: the usage the API reports.
+- A reply whose stream breaks or hits the 10-minute call timeout: the input and cache tokens reported when the stream started, plus a full 64k tokens of output. The real output count only arrives at the end of the stream, so the spike assumes the most it could have been.
+- A call that fails before the API reports any usage: nothing.
+
+A run cut off by the cap is reported separately. The verdict is marked provisional when the cost cap or an API rejection stops the spike, or when any run ends in an API error (including a timeout). With no completed runs there is no verdict.
 
 Results are written to `results/<timestamp>/` (`runs.jsonl` and `summary.md`). `summary.md` is rewritten after every chore, so an interrupted spike keeps its report.
 

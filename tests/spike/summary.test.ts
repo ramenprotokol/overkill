@@ -93,18 +93,29 @@ describe("summarize", () => {
     const s = summarize([run("success", 2, 60_000), run("success", 2, 60_000), { ...run("api_error", 0, 500_000), error: "timeout" }]);
     expect(s.p95WallMs).toBe(60_000);
   });
+
+  it("keeps runs that hit the call timeout in the run times, since they are the slowest", () => {
+    const timedOut = { ...run("api_error", 1, 600_000), error: "call timed out after 10 min" };
+    const one = summarize([run("success", 2, 60_000), run("success", 2, 60_000), timedOut]);
+    expect(one.p50WallMs).toBe(60_000);
+    expect(one.p95WallMs).toBe(600_000);
+    const two = summarize([run("success", 2, 60_000), run("success", 2, 60_000), timedOut, timedOut]);
+    expect(two.p50WallMs).toBe(600_000);
+    expect(two.reasons).toContain("p50 run time 600 s is not under 2 minutes");
+  });
 });
 
 const META = {
   model: "claude-opus-5-5", effort: "high", maxAttempts: 12,
-  planned: 2, maxCost: 30, spentUsd: 0.28, cutOff: null, stoppedByCap: false,
+  planned: 2, maxCost: 30, spentUsd: 0.28, cutOff: null, stoppedByCap: false, stoppedByApiError: false,
 };
 
 describe("renderMarkdown", () => {
   it("leads with the verdict and lists every run", () => {
     const runs = [run("success", 3), run("gave_up", 4)];
     const md = renderMarkdown(summarize(runs), runs, META);
-    expect(md).toContain("- Verdict: **SHIP_AS_STRUGGLE**");
+    expect(md).toContain("- Verdict: **SHIP_AS_STRUGGLE** — success rate 50% is below 60%\n");
+    expect(md).not.toContain("provisional");
     expect(md).toContain("- Coverage: 2 of 2 chores\n");
     expect(md).toContain("| Truncated replies | 0 |");
     expect(md).toContain("| Total cost | $0.28 |");
@@ -122,8 +133,29 @@ describe("renderMarkdown", () => {
     const runs = [run("success", 3), run("success", 3)];
     const md = renderMarkdown(summarize(runs, 5), runs, { ...META, planned: 5, spentUsd: 29.1, cutOff: "mist the fern", stoppedByCap: true });
     expect(md).toContain('- Coverage: 2 of 5 chores — stopped by the $30 cost cap, cut off during "mist the fern"; this verdict is provisional');
+    expect(md).toContain("- Verdict: **SHIP_AS_STRUGGLE** (provisional: the cost cap stopped the spike) — only 2 of 5 chores ran\n");
     expect(md).toContain("| Spent (all calls, including any cut-off run) | $29.10 |");
-    expect(md).toContain("only 2 of 5 chores ran");
+  });
+
+  it("marks the verdict provisional when a run ended in an API error", () => {
+    const runs = [run("success", 3), { ...run("api_error", 1, 600_000), chore: "mist the fern", error: "call timed out after 10 min" }];
+    const md = renderMarkdown(summarize(runs), runs, META);
+    expect(md).toContain("- Coverage: 2 of 2 chores\n");
+    expect(md).toContain("- Verdict: **SHIP_AS_STRUGGLE** (provisional: 1 run ended in an API error) — ");
+  });
+
+  it("marks the verdict provisional when an API rejection stopped the spike", () => {
+    const runs = [run("success", 3), { ...run("api_error", 0, 1_000), chore: "mist the fern", error: "401 invalid x-api-key" }];
+    const md = renderMarkdown(summarize(runs, 5), runs, { ...META, planned: 5, stoppedByApiError: true });
+    expect(md).toContain("- Coverage: 2 of 5 chores — stopped by an API rejection; this verdict is provisional\n");
+    expect(md).toContain("- Verdict: **SHIP_AS_STRUGGLE** (provisional: an API rejection stopped the spike; 1 run ended in an API error) — ");
+  });
+
+  it("gives no verdict when no runs completed", () => {
+    const md = renderMarkdown(summarize([], 3), [], { ...META, planned: 3, stoppedByCap: true });
+    expect(md).toContain("- Verdict: **NO VERDICT** — no runs completed\n");
+    expect(md).not.toContain("CHANGE_INTERFACE");
+    expect(md).not.toContain("SHIP_AS_STRUGGLE");
   });
 
   it("marks the cap without a cut-off chore when the cap was hit between chores", () => {
