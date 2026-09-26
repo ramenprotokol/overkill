@@ -68,3 +68,24 @@ export const neighbourBalls: Blueprint = {
     { id: "d5", kind: "domino", col: 11, row: 9 },
   ],
 };
+
+/** The golden machine plus a spare ball dropped straight onto the finale while the machine settles, push or no push. */
+export const droppedOnFinale: Blueprint = {
+  ...goldenDominoes,
+  note: "A spare ball above the switch, for redundancy.",
+  parts: [...goldenDominoes.parts, { id: "b2", kind: "ball", col: 8, row: 5, size: "s" }],
+};
+
+/**
+ * The golden chain wins the race (d5 hits the finale at step 187), but a spare ball rolls down a short ramp at the far
+ * right on its own and reaches the finale anyway (step 236), with or without the push. Verified in real physics.
+ */
+export const lateRoller: Blueprint = {
+  ...goldenDominoes,
+  note: "A backup ball on a ramp, in case the dominoes lose interest.",
+  parts: [
+    ...goldenDominoes.parts,
+    { id: "p1", kind: "plank", col: 15, row: 9, length: 1, angle: 15, fixed: true },
+    { id: "b2", kind: "ball", col: 15, row: 8, size: "s" },
+  ],
+};

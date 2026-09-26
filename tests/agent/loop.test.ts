@@ -5,8 +5,9 @@ import { runAgent, type MessagesApi } from "../../src/agent/loop.js";
 import type { Blueprint } from "../../src/core/blueprint.js";
 import { blueprintBodies } from "../../src/core/geometry.js";
 import { findOverlaps } from "../../src/core/preview.js";
-import { initPhysics } from "../../src/core/sim.js";
-import { dudMachine, goldenDominoes } from "../fixtures/golden.js";
+import { initPhysics, runSim } from "../../src/core/sim.js";
+import { analyze } from "../../src/core/trace.js";
+import { dudMachine, goldenDominoes, lateRoller } from "../fixtures/golden.js";
 
 let nextId = 0;
 const toolUse = (name: string, input: unknown) =>
@@ -126,6 +127,26 @@ describe("runAgent", () => {
     expect(result[0]!.is_error).toBe(true);
     expect(result[0]!.content).toBe(formatInvalid(1, 12, overlaps));
     expect(run.outcome).toBe("success");
+  });
+
+  it("does not count a success when the finale also gets hit without the first push", async () => {
+    const withPush = analyze(lateRoller, runSim(lateRoller));
+    expect(withPush.success).toBe(true);
+    const { api, calls } = fake([reply([toolUse("simulate", lateRoller)]), reply([toolUse("simulate", goldenDominoes)])]);
+    const run = await runAgent("turn off the light", { api });
+    expect(run.attempts).toHaveLength(2);
+    const first = run.attempts[0]!.report!;
+    expect(first.outcome).toBe("not_overkill");
+    expect(first.success).toBe(false);
+    expect(first.overkillScore).toBe(0);
+    expect(first.chain).toEqual(withPush.chain);
+    expect(first.summary).toBe("Not overkill enough: the finale gets hit even without the first push.");
+    const result = lastUserContent(calls[1]!) as Anthropic.ToolResultBlockParam[];
+    expect(result[0]!.content).toContain("NOT OVERKILL");
+    expect(result[0]!.content).toContain("Not overkill enough: the finale gets hit even without the first push.");
+    expect(result[0]!.is_error).toBeUndefined();
+    expect(run.outcome).toBe("success");
+    expect(run.attempts[1]!.report!.success).toBe(true);
   });
 
   it("stops at the attempt cap", async () => {

@@ -1,6 +1,6 @@
 import { JOIN_SLACK, MIN_CHAIN_PARTS, MOVE_WINDOW } from "./constants.js";
 import type { Blueprint } from "./blueprint.js";
-import type { SimResult } from "./sim.js";
+import { runSim, type SimResult } from "./sim.js";
 
 /** First step in [from, to] at which the part was moving, if any. */
 function firstMovingIn(sim: SimResult, id: string, from: number, to: number): number | undefined {
@@ -10,6 +10,31 @@ function firstMovingIn(sim: SimResult, id: string, from: number, to: number): nu
     if (t < end && t <= to && (first === undefined || t < first)) first = t;
   }
   return first;
+}
+
+/**
+ * Every touch of the finale by a part that was moving at the time, with the step it counts from. Resting against
+ * the finale doesn't count. The impact itself can stop the part within the contact step, so its motion is looked
+ * for one step earlier. Includes touches while the machine settles (negative steps).
+ */
+function movingFinaleTouches(sim: SimResult): { by: string; step: number }[] {
+  const out: { by: string; step: number }[] = [];
+  for (const c of sim.contacts) {
+    if (c.a !== "finale" && c.b !== "finale") continue;
+    const by = c.a === "finale" ? c.b : c.a;
+    const moving = firstMovingIn(sim, by, c.from - 1, c.to);
+    if (moving !== undefined) out.push({ by, step: Math.max(moving, c.from) });
+  }
+  return out;
+}
+
+/**
+ * True when the machine hits the finale without the first push: a replay with no push in which any part moves into
+ * the finale, at any step, settling included. A machine like that does the chore on its own, so a success with the
+ * push shouldn't be credited to the chain.
+ */
+export function finaleTriggeredWithoutPush(bp: Blueprint): boolean {
+  return movingFinaleTouches(runSim(bp, undefined, { push: false })).length > 0;
 }
 
 export type Outcome = "success" | "not_overkill" | "missed";
@@ -65,16 +90,10 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
     return path;
   };
 
-  // The chore happens the first time a moving part touches the finale; resting against it doesn't count.
+  // The chore happens the first time a moving part touches the finale.
   // It only counts for the machine if that part had already joined the chain by then.
   let trigger: { by: string; step: number; inChain: boolean } | null = null;
-  for (const c of sim.contacts) {
-    if (c.a !== "finale" && c.b !== "finale") continue;
-    const p = c.a === "finale" ? c.b : c.a;
-    // The impact itself can stop the part within the contact step, so look one step earlier for its motion.
-    const moving = firstMovingIn(sim, p, c.from - 1, c.to);
-    if (moving === undefined) continue;
-    const step = Math.max(moving, c.from);
+  for (const { by: p, step } of movingFinaleTouches(sim)) {
     const inChain = (joinedAt.get(p) ?? Infinity) <= step;
     const better = !trigger || step < trigger.step || (step === trigger.step && (inChain !== trigger.inChain ? inChain : p < trigger.by));
     if (better) trigger = { by: p, step, inChain };

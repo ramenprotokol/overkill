@@ -94,9 +94,9 @@ Run Durable Object (one per run) — owns the agent loop, one attempt per alarm 
 1. Visitor submits chore + wager → Worker checks length, rate limit, daily budget, moderation → creates a Run Durable Object → returns run id → browser opens the SSE stream.
 2. The Run object calls Opus with: system prompt (rules, grid, parts kit, overkill rule), tool definitions, the chore marked as untrusted data. System prompt and tools are prompt-cached. Effort is set explicitly (start at `high`; the spike measures `medium` too). Opus 5.5 can't be forced to call a tool, so the loop checks that a call was made and nudges once if not.
 3. Opus may call `preview` (does not count as an attempt, max 3 per attempt so it can't stall the loop) and `simulate` (counts as an attempt).
-4. Each `simulate`: validate → run sim (fixed timestep, fixed step count, ~20 s simulated) → trace report + trace hash → stream attempt to watchers → return a ~300-token report to Opus.
+4. Each `simulate`: validate (schema, then no starting overlaps — the same check `preview` runs) → run sim (fixed timestep, fixed step count, ~20 s simulated) → trace report + trace hash → if it succeeded, replay without the first push and downgrade it to "not overkill enough" when the finale gets hit anyway → stream attempt to watchers → return a ~300-token report to Opus.
 5. History is append-only: Opus 5.5 rejects replayed reasoning when earlier turns change, so older attempts are never trimmed or rewritten. Attempt reports stay compact (~300 tokens) instead; 12 attempts fit comfortably in context.
-6. Loop ends on: success, attempt cap, Opus gives up, or a hard token/time ceiling.
+6. Loop ends on: success, attempt cap, Opus gives up, a hard token/time ceiling, or a full context window (`context_full`: the run ends with no further call, since the next request would be rejected; it counts as a failure, not an API error).
 7. Run record saved to KV: chore, wager, every attempt's blueprint + report + note + trace hash, outcome, engine version.
 
 **Verification:** the browser replays each blueprint with the same pinned engine, hashes its event trace, and compares with the stored hash. Match → "Replay verified ✓". Mismatch → shows the server's stored report and says "couldn't verify on this device". (Stored keyframes as a fallback are deferred unless the spike shows mismatches.)
@@ -132,7 +132,7 @@ Run Durable Object (one per run) — owns the agent loop, one attempt per alarm 
 - **Untrusted output:** only schema-valid blueprints are simulated; notes length-limited and filtered; all user/model text rendered as text, never HTML.
 - **Gallery:** shows only runs that passed moderation; hall of fame is hand-picked in a repo JSON file.
 - **API failure:** one retry with backoff, then the run ends honestly ("Opus is having a moment") and doesn't count against the visitor.
-- **Invalid blueprint:** returned to Opus as a validation error; counts as an attempt.
+- **Invalid blueprint:** returned to Opus as a validation error; counts as an attempt. Parts that start overlapping make a blueprint invalid too, so it is never simulated (the engine would fling the parts apart).
 - **Privacy:** no accounts, no personal data; only chore text, wager and machine data stored. No identifying analytics.
 
 ## 9. Testing
@@ -180,6 +180,7 @@ A CLI running the real Opus + `preview` + `simulate` loop on the 20-chore set. N
 
 ## 13. Known limitations (from spike-build reviews, 2026-09-25)
 
-- **Chain attribution uses motion thresholds.** A part riding another (for example a bucket on a seesaw that tips *gradually*) can cross the motion threshold a few steps before the part carrying it, beyond the 2-step slack, so it is not credited to the chain. This produces false failures, never false successes. Impact launches work. **Planned fix before public launch:** a counterfactual attribution — run the same machine with and without the first push in lockstep and credit a part when its pose diverges while touching an already-diverged part; judge "hit the finale on its own" by whether the finale is also triggered without the push.
+- **Chain attribution uses motion thresholds.** A part riding another (for example a bucket on a seesaw that tips *gradually*) can cross the motion threshold a few steps before the part carrying it, beyond the 2-step slack, so it is not credited to the chain. This produces false failures; the design aims to avoid false successes. Impact launches work. **Planned fix before public launch:** a counterfactual attribution — run the same machine with and without the first push in lockstep and credit a part when its pose diverges while touching an already-diverged part; judge "hit the finale on its own" by whether the finale is also triggered without the push (that no-push check is now in place; see below).
+- **Rare false-success paths remain when parts move on their own after settling.** A part jostled into motion within 30 steps of touching a chain part is credited to the chain even if the chain didn't move it, and a part resting against the finale that later moves on its own counts as hitting it the moment it moves (credited if it has joined the chain by then). A no-push replay now guards the common case: when a run succeeds, the loop replays the machine without the first push, and if any part moves into the finale (at any step, settling included) the attempt becomes "Not overkill enough: the finale gets hit even without the first push."
 - Preview's floating-part warning says a part "will fall as soon as the machine starts"; with the 1-second settle it actually falls while settling.
 - `SimResult.events` / `finaleHit` count any first contact with the finale (including during settling); the trace uses its own moving-contact definition. Nothing reads the sim's version yet.

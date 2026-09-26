@@ -59,6 +59,21 @@ describe("runSim", () => {
     expect(d1Starts[0]).toBeGreaterThanOrEqual(hit.step - 1);
   });
 
+  it("runs the same settle and steps without the first push when push is false", () => {
+    const r = runSim(goldenDominoes, undefined, { push: false });
+    expect(r.steps).toBe(runSim(goldenDominoes).steps);
+    expect(r.moving.b1![0]![0]).toBeLessThan(0); // it still settled
+    expect(r.moving.b1!.every(([, end]) => end <= 0)).toBe(true); // but never moved after the push step
+    expect(r.parts.b1!.moved).toBe(false);
+    expect(r.parts.d1!.moved).toBe(false);
+    expect(r.finaleHit).toBeNull();
+    expect(r.hash).not.toBe(runSim(goldenDominoes).hash);
+  });
+
+  it("pushes by default", () => {
+    expect(runSim(goldenDominoes, undefined, { push: true }).hash).toBe(runSim(goldenDominoes).hash);
+  });
+
   it("lets the machine settle before the first push", () => {
     const r = runSim(goldenDominoes);
     expect(r.moving.b1![0]![0]).toBeLessThan(0); // it dropped onto the floor while settling

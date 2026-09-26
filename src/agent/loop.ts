@@ -4,7 +4,7 @@ import { ENGINE } from "../core/constants.js";
 import { blueprintBodies } from "../core/geometry.js";
 import { findOverlaps, preview } from "../core/preview.js";
 import { runSim } from "../core/sim.js";
-import { analyze, type AttemptReport } from "../core/trace.js";
+import { analyze, finaleTriggeredWithoutPush, type AttemptReport } from "../core/trace.js";
 import { addUsage, emptyUsage, type Usage } from "./cost.js";
 import { formatInvalid, formatPreview, formatReport } from "./format.js";
 import { SYSTEM_PROMPT, TOOLS, userPrompt } from "./prompt.js";
@@ -172,7 +172,17 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
       messages.push(toolResult(call.id, formatInvalid(n, maxAttempts, overlaps), true));
     } else {
       const sim = runSim(parsed.blueprint);
-      const report = analyze(parsed.blueprint, sim);
+      let report = analyze(parsed.blueprint, sim);
+      // A machine that hits the finale even when nobody pushes it does the chore on its own, not through the chain.
+      if (report.success && finaleTriggeredWithoutPush(parsed.blueprint)) {
+        report = {
+          ...report,
+          outcome: "not_overkill",
+          success: false,
+          overkillScore: 0,
+          summary: "Not overkill enough: the finale gets hit even without the first push.",
+        };
+      }
       record({ attempt: n, blueprint: parsed.blueprint, report, errors: [], note: parsed.blueprint.note, traceHash: sim.hash });
       if (report.success) {
         outcome = "success";

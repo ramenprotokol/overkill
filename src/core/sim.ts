@@ -54,7 +54,13 @@ export function initPhysics(): Promise<void> {
 const MATERIAL = { density: 1, friction: 0.5, restitution: 0.1 };
 const round = (n: number) => Math.round(n * 1e4) / 1e4;
 
-export function runSim(bp: Blueprint, steps = SIM_STEPS): SimResult {
+export interface SimOptions {
+  /** Apply the first push at step 0 (default true). Without it the machine runs the same settle and steps untouched. */
+  push?: boolean;
+}
+
+export function runSim(bp: Blueprint, steps = SIM_STEPS, options: SimOptions = {}): SimResult {
+  const push = options.push ?? true;
   const world = new RAPIER.World(GRAVITY);
   world.timestep = TIMESTEP;
   const queue = new RAPIER.EventQueue(true);
@@ -109,7 +115,7 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS): SimResult {
           const t = rigid.get(id)!.translation();
           start.set(id, { x: t.x, y: t.y });
         }
-        pushed.applyImpulse({ x: pushed.mass() * speed, y: 0 }, true);
+        if (push) pushed.applyImpulse({ x: pushed.mass() * speed, y: 0 }, true);
       }
       world.step(queue);
       queue.drainCollisionEvents((h1, h2, started) => {

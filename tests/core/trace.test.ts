@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initPhysics, runSim, type Contact, type PartTrack, type SimResult } from "../../src/core/sim.js";
-import { analyze } from "../../src/core/trace.js";
-import { dudMachine, goldenDominoes, lazyRoll, neighbourBalls, shortChain } from "../fixtures/golden.js";
+import { analyze, finaleTriggeredWithoutPush } from "../../src/core/trace.js";
+import { droppedOnFinale, dudMachine, goldenDominoes, lateRoller, lazyRoll, neighbourBalls, shortChain } from "../fixtures/golden.js";
 
 type Spans = [number, number][];
 const touch = (a: string, b: string, from: number, to = from + 5): Contact => (a < b ? { a, b, from, to } : { a: b, b: a, from, to });
@@ -195,5 +195,29 @@ describe("analyze (real physics)", () => {
     const r = analyze(neighbourBalls, runSim(neighbourBalls));
     expect(r.outcome).toBe("success");
     expect(r.chain).toEqual(["b1", "b2", "d1", "d2", "d3", "d4", "d5"]);
+  });
+});
+
+describe("finaleTriggeredWithoutPush (real physics)", () => {
+  beforeAll(async () => {
+    await initPhysics();
+  });
+
+  it("is false for the golden machine: nothing reaches the finale unless the ball is pushed", () => {
+    expect(finaleTriggeredWithoutPush(goldenDominoes)).toBe(false);
+  });
+
+  it("is true when a spare ball is dropped onto the finale from above", () => {
+    expect(finaleTriggeredWithoutPush(droppedOnFinale)).toBe(true);
+  });
+
+  it("is true for a machine that succeeds with the push while a spare ball reaches the finale on its own later", () => {
+    expect(analyze(lateRoller, runSim(lateRoller)).success).toBe(true);
+    expect(finaleTriggeredWithoutPush(lateRoller)).toBe(true);
+  });
+
+  it("is false when nothing moves into the finale without the push", () => {
+    expect(finaleTriggeredWithoutPush(dudMachine)).toBe(false);
+    expect(finaleTriggeredWithoutPush(lazyRoll)).toBe(false);
   });
 });
