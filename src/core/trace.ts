@@ -1,4 +1,4 @@
-import { MIN_CHAIN_PARTS, MOVE_WINDOW } from "./constants.js";
+import { JOIN_SLACK, MIN_CHAIN_PARTS, MOVE_WINDOW } from "./constants.js";
 import type { Blueprint } from "./blueprint.js";
 import type { SimResult } from "./sim.js";
 
@@ -33,23 +33,25 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
   const root = bp.firstPush.ball;
   // parent[x] = the chain part that set x off (null for the pushed ball). Map order = order parts joined.
   const parent = new Map<string, string | null>([[root, null]]);
-  const joinedAt = new Map<string, number>([[root, -1]]);
+  const joinedAt = new Map<string, number>([[root, 0]]);
 
   // Grow the chain earliest-first until nothing else can join. A part joins from a chain part it is touching —
   // a fresh hit or a resting contact — when it starts moving during that contact or within MOVE_WINDOW steps after.
-  // Parts already moving on their own can't join: they have no new start.
+  // Parts already moving on their own can't join: they have no new start. The machine settles before the push
+  // (step 0), so a part may be seen moving up to JOIN_SLACK steps before the part that set it off — motion is
+  // sampled per body, and nothing is allowed to join before the push itself.
   for (;;) {
-    let next: { id: string; from: string; step: number } | null = null;
+    let next: { id: string; from: string; fromJoined: number; step: number } | null = null;
     for (const c of sim.contacts) {
       for (const [x, y] of [[c.a, c.b], [c.b, c.a]] as const) {
         const xJoined = joinedAt.get(x);
         if (xJoined === undefined || joinedAt.has(y) || !(y in sim.parts)) continue;
-        const from = Math.max(c.from, xJoined);
+        const from = Math.max(c.from, xJoined - JOIN_SLACK, 0); // nothing joins before the push
         if (from > c.to) continue;
         const onset = (sim.moving[y] ?? []).map(([start]) => start).find((s) => s >= from && s <= c.to + MOVE_WINDOW);
         if (onset === undefined) continue;
-        const better = !next || onset < next.step || (onset === next.step && (y < next.id || (y === next.id && x < next.from)));
-        if (better) next = { id: y, from: x, step: onset };
+        const better = !next || onset < next.step || (onset === next.step && (y < next.id || (y === next.id && (xJoined < next.fromJoined || (xJoined === next.fromJoined && x < next.from)))));
+        if (better) next = { id: y, from: x, fromJoined: xJoined, step: onset };
       }
     }
     if (!next) break;

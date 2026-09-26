@@ -1,7 +1,7 @@
 import RAPIER, { type RigidBody } from "@dimforge/rapier2d-deterministic-compat";
-import { ENGINE, GRAVITY, MOVE_ANGULAR, MOVE_LINEAR, PUSH_SPEED, SIM_STEPS, TIMESTEP } from "./constants.js";
+import { ENGINE, GRAVITY, MOVE_SPEED, PUSH_SPEED, SETTLE_STEPS, SIM_STEPS, TIMESTEP } from "./constants.js";
 import type { Blueprint } from "./blueprint.js";
-import { blueprintBodies } from "./geometry.js";
+import { blueprintBodies, bodyRadius } from "./geometry.js";
 import { fnv1a64 } from "./hash.js";
 
 export interface SimEvent {
@@ -38,7 +38,8 @@ export interface SimResult {
   engine: string;
   /** Every contact interval, in the order the contacts began. */
   contacts: Contact[];
-  /** Dynamic parts only: half-open step intervals [start, end) during which the part was moving. */
+  /** Dynamic parts only: half-open step intervals [start, end) during which the part was moving.
+   * The push is step 0, so settling steps (before the push) are negative. */
   moving: Record<string, [number, number][]>;
 }
 
@@ -88,21 +89,28 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS): SimResult {
     const finale = bodies.find((b) => b.id === "finale")!;
     const pushed = rigid.get(bp.firstPush.ball)!;
     const speed = PUSH_SPEED[bp.firstPush.strength] * (bp.firstPush.direction === "right" ? 1 : -1);
-    pushed.applyImpulse({ x: pushed.mass() * speed, y: 0 }, true);
 
     const dynamicIds = bodies.filter((b) => b.dynamic).map((b) => b.id);
+    const radiusOf = new Map(bodies.filter((b) => b.dynamic).map((b) => [b.id, bodyRadius(b)]));
     const movingFlags = new Map<string, boolean[]>(dynamicIds.map((id) => [id, []]));
     const minDist = new Map<string, number>(dynamicIds.map((id) => [id, Infinity]));
-    const start = new Map(dynamicIds.map((id) => {
-      const t = rigid.get(id)!.translation();
-      return [id, { x: t.x, y: t.y }] as const;
-    }));
+    const start = new Map<string, { x: number; y: number }>();
     const raw: { step: number; a: string; b: string }[] = [];
     let finaleHit = null as SimResult["finaleHit"];
     const open = new Map<string, { contact: Contact; count: number }>();
     const contacts: Contact[] = [];
 
-    for (let step = 0; step < steps; step++) {
+    // The machine settles under gravity for SETTLE_STEPS before the first push, so a ball that
+    // spawns above whatever it rests on has already landed by the time it's judged to be "moving".
+    for (let i = 0; i < SETTLE_STEPS + steps; i++) {
+      const step = i - SETTLE_STEPS;
+      if (step === 0) {
+        for (const id of dynamicIds) {
+          const t = rigid.get(id)!.translation();
+          start.set(id, { x: t.x, y: t.y });
+        }
+        pushed.applyImpulse({ x: pushed.mass() * speed, y: 0 }, true);
+      }
       world.step(queue);
       queue.drainCollisionEvents((h1, h2, started) => {
         const n1 = nameOf.get(h1);
@@ -133,9 +141,12 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS): SimResult {
       for (const id of dynamicIds) {
         const body = rigid.get(id)!;
         const v = body.linvel();
-        movingFlags.get(id)!.push(Math.hypot(v.x, v.y) > MOVE_LINEAR || Math.abs(body.angvel()) > MOVE_ANGULAR);
-        const t = body.translation();
-        minDist.set(id, Math.min(minDist.get(id)!, Math.hypot(t.x - finale.x, t.y - finale.y)));
+        const radius = radiusOf.get(id)!;
+        movingFlags.get(id)!.push(Math.hypot(v.x, v.y) + Math.abs(body.angvel()) * radius > MOVE_SPEED);
+        if (step >= 0) {
+          const t = body.translation();
+          minDist.set(id, Math.min(minDist.get(id)!, Math.hypot(t.x - finale.x, t.y - finale.y)));
+        }
       }
     }
 
@@ -145,13 +156,21 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS): SimResult {
     const moving: Record<string, [number, number][]> = {};
     for (const id of dynamicIds) {
       const t = rigid.get(id)!.translation();
-      parts[id] = { start: start.get(id)!, end: { x: t.x, y: t.y }, moved: movingFlags.get(id)!.some(Boolean), minDistToFinale: minDist.get(id)! };
-      moving[id] = intervals(movingFlags.get(id)!);
+      const flags = movingFlags.get(id)!;
+      parts[id] = {
+        start: start.get(id)!,
+        end: { x: t.x, y: t.y },
+        moved: flags.slice(SETTLE_STEPS).some(Boolean),
+        minDistToFinale: minDist.get(id)!,
+      };
+      moving[id] = intervals(flags, -SETTLE_STEPS);
     }
 
     const hash = fnv1a64(JSON.stringify({
       events: raw,
       finaleHit,
+      contacts,
+      moving,
       end: dynamicIds.map((id) => [id, round(parts[id]!.end.x), round(parts[id]!.end.y)]),
     }));
     return { events, parts, finaleHit, steps, hash, engine: ENGINE, contacts, moving };
@@ -161,13 +180,13 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS): SimResult {
   }
 }
 
-function intervals(flags: boolean[]): [number, number][] {
+function intervals(flags: boolean[], offset: number): [number, number][] {
   const out: [number, number][] = [];
   let start = -1;
   flags.forEach((m, i) => {
     if (m && start < 0) start = i;
-    if (!m && start >= 0) { out.push([start, i]); start = -1; }
+    if (!m && start >= 0) { out.push([start + offset, i + offset]); start = -1; }
   });
-  if (start >= 0) out.push([start, flags.length]);
+  if (start >= 0) out.push([start + offset, flags.length + offset]);
   return out;
 }

@@ -92,6 +92,11 @@ export function blueprintBodies(bp: Blueprint): Body[] {
   return [FLOOR, finaleBody(bp), ...parts];
 }
 
+/** Distance from the body's origin to its farthest point, so |v| + |ω|·radius bounds how fast any point of it moves. */
+export function bodyRadius(b: Body): number {
+  return Math.max(...b.shapes.map((s) => Math.hypot(s.x, s.y) + (s.type === "circle" ? s.r : Math.hypot(s.hx, s.hy))));
+}
+
 export function worldShapes(b: Body): WorldShape[] {
   const cos = Math.cos(b.angle);
   const sin = Math.sin(b.angle);

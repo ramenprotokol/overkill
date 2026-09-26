@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  FLOOR, blueprintBodies, cellBottom, cellCenter, containsPoint, partBody, penetration, worldShapes,
+  FLOOR, blueprintBodies, bodyRadius, cellBottom, cellCenter, containsPoint, partBody, penetration, worldShapes,
 } from "../../src/core/geometry.js";
 import { goldenDominoes } from "../fixtures/golden.js";
 
@@ -61,6 +61,15 @@ describe("penetration", () => {
   it("treats a ball resting on the floor as touching, not overlapping", () => {
     const ball = { type: "circle", x: 0.5, y: 0.3, r: 0.3 } as const;
     expect(penetration(ball, worldShapes(FLOOR)[0]!)).toBeCloseTo(0);
+  });
+});
+
+describe("bodyRadius", () => {
+  it("reaches the farthest point of each part", () => {
+    expect(bodyRadius(partBody({ id: "b1", kind: "ball", col: 0, row: 0, size: "m" }))).toBeCloseTo(0.3);
+    expect(bodyRadius(partBody({ id: "d1", kind: "domino", col: 0, row: 9 }))).toBeCloseTo(Math.hypot(0.1, 0.8));
+    expect(bodyRadius(partBody({ id: "s1", kind: "seesaw", col: 5, row: 7, length: 4 }))).toBeCloseTo(Math.hypot(2, 0.1));
+    expect(bodyRadius(partBody({ id: "u1", kind: "bucket", col: 1, row: 9, fixed: false }))).toBeCloseTo(Math.hypot(0.45, 0.4) + Math.hypot(0.05, 0.3));
   });
 });
 

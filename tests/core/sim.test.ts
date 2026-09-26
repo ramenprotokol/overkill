@@ -51,10 +51,17 @@ describe("runSim", () => {
     expect(r.contacts.every((x) => x.a < x.b && x.a !== "floor" && x.b !== "floor" && x.to <= r.steps)).toBe(true);
   });
 
-  it("records when each part was moving", () => {
+  it("records when each part was moving, in step numbers where the push is step 0", () => {
     const r = runSim(goldenDominoes);
-    expect(r.moving.b1![0]![0]).toBe(0);
+    expect(r.moving.b1!.some(([s]) => s === 0)).toBe(true);
     const hit = r.events.find((e) => e.a === "b1" && e.b === "d1")!;
-    expect(r.moving.d1![0]![0]).toBeGreaterThanOrEqual(hit.step - 1);
+    const d1Starts = r.moving.d1!.map(([s]) => s).filter((s) => s >= 0);
+    expect(d1Starts[0]).toBeGreaterThanOrEqual(hit.step - 1);
+  });
+
+  it("lets the machine settle before the first push", () => {
+    const r = runSim(goldenDominoes);
+    expect(r.moving.b1![0]![0]).toBeLessThan(0); // it dropped onto the floor while settling
+    expect(r.parts.b1!.start.y).toBeCloseTo(0.3, 1); // and was resting there when pushed
   });
 });

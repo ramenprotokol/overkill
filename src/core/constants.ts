@@ -11,9 +11,12 @@ export const TIMESTEP = 1 / 60;
 export const SIM_STEPS = 1200;
 export const GRAVITY = { x: 0, y: -9.81 };
 
-/** Above these speeds a part counts as moving. */
-export const MOVE_LINEAR = 0.2; // m/s
-export const MOVE_ANGULAR = 0.5; // rad/s
+/** A part counts as moving when its fastest point moves faster than this (m/s). */
+export const MOVE_SPEED = 0.2;
+/** The machine settles under gravity for this many steps (1 second) before the first push. */
+export const SETTLE_STEPS = 60;
+/** A part may be seen moving up to this many steps before the part that set it off (motion is sampled per body). */
+export const JOIN_SLACK = 2;
 /** Steps after a hit in which the hit part must start moving to join the chain. */
 export const MOVE_WINDOW = 30;
 

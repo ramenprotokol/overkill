@@ -42,13 +42,29 @@ export const dudMachine: Blueprint = {
   firstPush: { ball: "b1", direction: "left", strength: "soft" },
 };
 
-/** A ball dropped onto a level seesaw tips it. */
+/** A ball still falling when the push lands, dropped onto a level seesaw it tips on the way down. */
 export const seesawDrop: Blueprint = {
   note: "Gravity, meet seesaw.",
   finale: { kind: "bell", label: "ring the bell", col: 14, row: 9 },
   firstPush: { ball: "b1", direction: "right", strength: "soft" },
   parts: [
-    { id: "b1", kind: "ball", col: 5, row: 3, size: "m" },
+    { id: "b1", kind: "ball", col: 4, row: 0, size: "m" },
     { id: "s1", kind: "seesaw", col: 5, row: 7, length: 4 },
+  ],
+};
+
+/** Two balls a cell apart: the pushed ball hits its neighbour, which rolls into five dominoes. */
+export const neighbourBalls: Blueprint = {
+  note: "Ball, ball, then dominoes.",
+  finale: { kind: "switch", label: "turn off the light", col: 12, row: 9 },
+  firstPush: { ball: "b1", direction: "right", strength: "medium" },
+  parts: [
+    { id: "b1", kind: "ball", col: 2, row: 9, size: "m" },
+    { id: "b2", kind: "ball", col: 3, row: 9, size: "m" },
+    { id: "d1", kind: "domino", col: 7, row: 9 },
+    { id: "d2", kind: "domino", col: 8, row: 9 },
+    { id: "d3", kind: "domino", col: 9, row: 9 },
+    { id: "d4", kind: "domino", col: 10, row: 9 },
+    { id: "d5", kind: "domino", col: 11, row: 9 },
   ],
 };

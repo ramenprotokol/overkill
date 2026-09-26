@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initPhysics, runSim, type Contact, type PartTrack, type SimResult } from "../../src/core/sim.js";
 import { analyze } from "../../src/core/trace.js";
-import { dudMachine, goldenDominoes, lazyRoll, shortChain } from "../fixtures/golden.js";
+import { dudMachine, goldenDominoes, lazyRoll, neighbourBalls, shortChain } from "../fixtures/golden.js";
 
 type Spans = [number, number][];
 const touch = (a: string, b: string, from: number, to = from + 5): Contact => (a < b ? { a, b, from, to } : { a: b, b: a, from, to });
@@ -119,6 +119,46 @@ describe("analyze (hand-built traces)", () => {
     ));
     expect(r.outcome).toBe("success");
   });
+
+  it("ignores a part resting against the finale that never moves into it", () => {
+    const r = analyze(goldenDominoes, sim([touch("b1", "d1", 10), touch("d5", "finale", -30, 1200)], { ...idle, b1: [[0, 50]], d1: [[10, 40]] }));
+    expect(r.outcome).toBe("missed");
+    expect(r.finaleHitBy).toBeNull();
+  });
+
+  it("counts something that hit the finale while the machine was settling as hitting it on its own", () => {
+    const r = analyze(goldenDominoes, sim([touch("b2", "finale", -20)], { b1: [[0, 50]], b2: [[-40, -19]] }));
+    expect(r.outcome).toBe("not_overkill");
+    expect(r.chain).toEqual(["b2"]);
+  });
+
+  it("lets a part start moving within MOVE_WINDOW steps after the contact ends, but not later", () => {
+    const joins = analyze(goldenDominoes, sim([touch("b1", "d1", 10, 12)], { ...idle, b1: [[0, 50]], d1: [[42, 60]] }));
+    expect(joins.chain).toEqual(["b1", "d1"]);
+    const late = analyze(goldenDominoes, sim([touch("b1", "d1", 10, 12)], { ...idle, b1: [[0, 50]], d1: [[43, 60]] }));
+    expect(late.chain).toEqual(["b1"]);
+  });
+
+  it("never lets a fixed part join the chain", () => {
+    const r = analyze(goldenDominoes, sim([touch("b1", "p9", 10)], { ...idle, b1: [[0, 50]] }));
+    expect(r.chain).toEqual(["b1"]);
+  });
+
+  it("allows a load to be seen moving a step before the seesaw that launches it", () => {
+    const r = analyze(goldenDominoes, sim(
+      [touch("k1", "s1", -10, 500), touch("b1", "s1", 100)],
+      { b1: [[0, 110]], s1: [[101, 150]], k1: [[-50, -40], [100, 160]] },
+    ));
+    expect(r.chain).toEqual(["b1", "s1", "k1"]);
+  });
+
+  it("credits the earliest-joined parent when two chain parts set a part off at once", () => {
+    const r = analyze(goldenDominoes, sim(
+      [touch("b1", "a1", 5), touch("a1", "z1", 20), touch("b1", "z1", 20)],
+      { b1: [[0, 50]], a1: [[5, 50]], z1: [[20, 50]] },
+    ));
+    expect(r.chain).toEqual(["b1", "z1"]);
+  });
 });
 
 describe("analyze (real physics)", () => {
@@ -149,5 +189,11 @@ describe("analyze (real physics)", () => {
     expect(r.outcome).toBe("missed");
     expect(r.fellOff).toEqual(["b1"]);
     expect(r.neverMoved).toEqual(["d1", "d2", "d3", "d4", "d5"]);
+  });
+
+  it("follows the pushed ball through its neighbour into the dominoes", () => {
+    const r = analyze(neighbourBalls, runSim(neighbourBalls));
+    expect(r.outcome).toBe("success");
+    expect(r.chain).toEqual(["b1", "b2", "d1", "d2", "d3", "d4", "d5"]);
   });
 });
