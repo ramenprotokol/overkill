@@ -2,17 +2,13 @@ import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import Anthropic from "@anthropic-ai/sdk";
-import { addUsage, costUsd, emptyUsage } from "../agent/cost.js";
-import { DEFAULT_MODEL, runAgent, type MessagesApi, type RunRecord } from "../agent/loop.js";
+import { costUsd } from "../agent/cost.js";
+import { DEFAULT_MODEL, runAgent, type RunRecord } from "../agent/loop.js";
 import { initPhysics } from "../core/sim.js";
+import { createCappedApi, PartialUsageError, WORST_CALL_USD, type StreamCall } from "./capped-api.js";
 import { CHORES } from "./chores.js";
 import { parseSpikeOptions, type SpikeOptions } from "./options.js";
 import { renderMarkdown, summarize } from "./summary.js";
-
-/** One maximum-length reply (64k output tokens ≈ $1.28) plus a large prompt. */
-const WORST_CALL_USD = 1.5;
-/** A stalled stream is abandoned after this long. */
-const CALL_TIMEOUT_MS = 10 * 60 * 1000;
 
 function readOptions(): SpikeOptions {
   const { values } = parseArgs({
@@ -50,35 +46,20 @@ async function main(): Promise<void> {
   delete process.env.ANTHROPIC_CUSTOM_HEADERS;
   const client = new Anthropic({ apiKey, authToken: null, baseURL: "https://api.anthropic.com" });
 
-  // `spent` counts every billed call, including one in a run the cap cuts off. A call is only made when even a
-  // maximum-length reply would keep spending within the cap.
-  let spent = 0;
-  let capHit = false;
-  const addSpend = (usage: Anthropic.Usage) => {
-    spent += costUsd(addUsage(emptyUsage(), usage));
+  // Stream: replies can be long (max_tokens 64000 covers thinking), and streaming avoids HTTP timeouts. If the stream
+  // dies midway, the usage the SDK already received is handed to the adapter so it still counts against the cap.
+  const stream: StreamCall = async (body, signal) => {
+    const s = client.messages.stream(body, { signal });
+    try {
+      return await s.finalMessage();
+    } catch (e) {
+      const partial = s.currentMessage?.usage;
+      throw partial ? new PartialUsageError(e, partial) : e;
+    }
   };
-  const api: MessagesApi = {
-    messages: {
-      create: async (body) => {
-        if (spent + WORST_CALL_USD > opts.maxCost) {
-          capHit = true;
-          throw new Error(`cost cap reached: $${spent.toFixed(2)} spent of $${opts.maxCost}`);
-        }
-        // Stream: replies can be long (max_tokens 64000 covers thinking), and streaming avoids HTTP timeouts.
-        const stream = client.messages.stream(body, { signal: AbortSignal.timeout(CALL_TIMEOUT_MS) });
-        try {
-          const msg = await stream.finalMessage();
-          addSpend(msg.usage);
-          return msg;
-        } catch (e) {
-          // A stream that dies midway may still be billed for what it produced, so count the usage that arrived.
-          const partial = stream.currentMessage?.usage;
-          if (partial) addSpend(partial);
-          throw e;
-        }
-      },
-    },
-  };
+  // Counts every billed call, including one in a run the cap cuts off, and refuses any call that could pass the cap.
+  const capped = createCappedApi(stream, opts.maxCost);
+  const { api } = capped;
   await initPhysics();
 
   const dir = join(opts.out, new Date().toISOString().replace(/[:.]/g, "-"));
@@ -98,16 +79,16 @@ async function main(): Promise<void> {
         maxAttempts: opts.maxAttempts,
         planned: planned.length,
         maxCost: opts.maxCost,
-        spentUsd: spent,
+        spentUsd: capped.spent(),
         cutOff,
         stoppedByCap,
       }),
     );
 
   for (const chore of planned) {
-    if (spent + WORST_CALL_USD > opts.maxCost) {
+    if (capped.spent() + WORST_CALL_USD > opts.maxCost) {
       stoppedByCap = true;
-      console.log(`Stopping: $${spent.toFixed(2)} spent, and one more call (up to $${WORST_CALL_USD}) could pass the $${opts.maxCost} cap.`);
+      console.log(`Stopping: $${capped.spent().toFixed(2)} spent, and one more call (up to $${WORST_CALL_USD}) could pass the $${opts.maxCost} cap.`);
       break;
     }
     console.log(`\n▶ ${chore}`);
@@ -118,7 +99,7 @@ async function main(): Promise<void> {
       onAttempt: (a) => console.log(`  attempt ${a.attempt}: ${a.report?.summary ?? `invalid: ${a.errors[0] ?? "unknown error"}`}${a.note ? `  "${a.note}"` : ""}`),
     });
 
-    if (capHit) {
+    if (capped.capHit()) {
       // The budget, not the model, ended this run, so it would skew the verdict; keep it on record but out of the summary.
       stoppedByCap = true;
       cutOff = chore;
@@ -141,7 +122,7 @@ async function main(): Promise<void> {
 
   writeSummary();
   const verdict = summarize(runs, planned.length).verdict;
-  console.log(`\nVerdict: ${verdict}${stoppedByCap ? " (provisional: stopped by the cost cap)" : ""}. Spent $${spent.toFixed(2)}. Summary: ${summaryPath}`);
+  console.log(`\nVerdict: ${verdict}${stoppedByCap ? " (provisional: stopped by the cost cap)" : ""}. Spent $${capped.spent().toFixed(2)}. Summary: ${summaryPath}`);
 }
 
 main().catch((e: unknown) => {
