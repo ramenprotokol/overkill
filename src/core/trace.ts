@@ -23,9 +23,16 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
   const root = bp.firstPush.ball;
   // parent[x] = the chain part that set x off (null for the pushed ball). Map order = order parts joined.
   const parent = new Map<string, string | null>([[root, null]]);
+  // joinedAt[x] = the step at which x became part of the chain (-1 for the pushed ball).
+  const joinedAt = new Map<string, number>([[root, -1]]);
   for (const e of sim.events) {
-    if (parent.has(e.a) && !parent.has(e.b) && e.b in sim.parts && e.bMoves) parent.set(e.b, e.a);
-    else if (parent.has(e.b) && !parent.has(e.a) && e.a in sim.parts && e.aMoves) parent.set(e.a, e.b);
+    if (parent.has(e.a) && !parent.has(e.b) && e.b in sim.parts && e.bMoves) {
+      parent.set(e.b, e.a);
+      joinedAt.set(e.b, e.step);
+    } else if (parent.has(e.b) && !parent.has(e.a) && e.a in sim.parts && e.aMoves) {
+      parent.set(e.a, e.b);
+      joinedAt.set(e.a, e.step);
+    }
   }
   const pathTo = (id: string): string[] => {
     const path: string[] = [];
@@ -34,7 +41,10 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
   };
 
   const hitBy = sim.finaleHit?.by ?? null;
-  const hitByChain = hitBy !== null && parent.has(hitBy);
+  // A part only counts as "in the chain" for the finale hit if it had already joined
+  // the chain by the step the finale was hit — joining later means the chain reached
+  // it too late to take credit for a hit that already happened.
+  const hitByChain = hitBy !== null && sim.finaleHit !== null && (joinedAt.get(hitBy) ?? Infinity) <= sim.finaleHit.step;
   let chain: string[];
   let outcome: Outcome;
   if (hitBy !== null && hitByChain) {
@@ -79,7 +89,7 @@ function summarize(r: Omit<AttemptReport, "summary">, hitByChain: boolean): stri
   const path = r.chain.join(" → ");
   if (r.outcome === "success") return `Success: ${r.chain.length}-part chain ${path} → finale.`;
   if (r.outcome === "not_overkill") {
-    if (!hitByChain) return `Not overkill enough: ${r.finaleHitBy} hit the finale on its own; the chain never reached it.`;
+    if (!hitByChain) return `Not overkill enough: ${r.finaleHitBy} hit the finale on its own, before the chain reached it.`;
     return `Not overkill enough: ${path} → finale is a ${r.chain.length}-part chain; it needs at least ${MIN_CHAIN_PARTS}.`;
   }
   const closest = r.closest ? ` Closest to the finale: ${r.closest.part} at ${r.closest.cells} cells.` : "";

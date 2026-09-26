@@ -37,7 +37,29 @@ describe("analyze (hand-built traces)", () => {
     const r = analyze(goldenDominoes, sim([ev(1, "b1", "d1")], allMoved, { step: 9, by: "d3" }));
     expect(r.outcome).toBe("not_overkill");
     expect(r.chain).toEqual(["d3"]);
-    expect(r.summary).toBe("Not overkill enough: d3 hit the finale on its own; the chain never reached it.");
+    expect(r.summary).toBe("Not overkill enough: d3 hit the finale on its own, before the chain reached it.");
+  });
+
+  it("does not credit a part that hit the finale before the chain reached it", () => {
+    const r = analyze(goldenDominoes, sim(
+      [ev(1, "d4", "finale", true, false), ev(10, "b1", "d1"), ev(20, "d1", "d2"), ev(30, "d2", "d3"), ev(40, "d3", "d4")],
+      allMoved,
+      { step: 1, by: "d4" },
+    ));
+    expect(r.outcome).toBe("not_overkill");
+    expect(r.success).toBe(false);
+    expect(r.chain).toEqual(["d4"]);
+    expect(r.summary).toBe("Not overkill enough: d4 hit the finale on its own, before the chain reached it.");
+  });
+
+  it("credits a part that joined the chain on the same step it hit the finale", () => {
+    const r = analyze(goldenDominoes, sim(
+      [ev(1, "b1", "d1"), ev(2, "d1", "d2"), ev(3, "d2", "d3"), ev(4, "d3", "d4"), ev(5, "d4", "d5"), ev(5, "d5", "finale", true, false)],
+      allMoved,
+      { step: 5, by: "d5" },
+    ));
+    expect(r.outcome).toBe("success");
+    expect(r.chain).toEqual(["b1", "d1", "d2", "d3", "d4", "d5"]);
   });
 
   it("only extends the chain when the hit part actually moves", () => {
