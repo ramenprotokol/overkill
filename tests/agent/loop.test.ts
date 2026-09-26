@@ -1,6 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { beforeAll, describe, expect, it } from "vitest";
+import { formatInvalid } from "../../src/agent/format.js";
 import { runAgent, type MessagesApi } from "../../src/agent/loop.js";
+import type { Blueprint } from "../../src/core/blueprint.js";
+import { blueprintBodies } from "../../src/core/geometry.js";
+import { findOverlaps } from "../../src/core/preview.js";
 import { initPhysics } from "../../src/core/sim.js";
 import { dudMachine, goldenDominoes } from "../fixtures/golden.js";
 
@@ -108,6 +112,22 @@ describe("runAgent", () => {
     expect(run.outcome).toBe("success");
   });
 
+  it("uses an attempt on an overlapping blueprint and returns the overlaps as an error, without simulating it", async () => {
+    const overlapping: Blueprint = { ...goldenDominoes, parts: [...goldenDominoes.parts, { id: "d6", kind: "domino", col: 7, row: 9 }] };
+    const overlaps = findOverlaps(blueprintBodies(overlapping));
+    expect(overlaps).toEqual(["d5 overlaps d6 by 0.20 cells"]);
+    const { api, calls } = fake([reply([toolUse("simulate", overlapping)]), reply([toolUse("simulate", goldenDominoes)])]);
+    const run = await runAgent("turn off the light", { api });
+    expect(run.attempts).toHaveLength(2);
+    expect(run.attempts[0]!.errors).toEqual(overlaps);
+    expect(run.attempts[0]!.report).toBeNull();
+    expect(run.attempts[0]!.traceHash).toBeNull();
+    const result = lastUserContent(calls[1]!) as Anthropic.ToolResultBlockParam[];
+    expect(result[0]!.is_error).toBe(true);
+    expect(result[0]!.content).toBe(formatInvalid(1, 12, overlaps));
+    expect(run.outcome).toBe("success");
+  });
+
   it("stops at the attempt cap", async () => {
     const { api } = fake([reply([toolUse("simulate", dudMachine)]), reply([toolUse("simulate", dudMachine)])]);
     const run = await runAgent("turn off the light", { api, maxAttempts: 2 });
@@ -194,19 +214,18 @@ describe("runAgent", () => {
     expect(result[0]!.is_error).toBe(true);
   });
 
-  it("counts a context-window stop as a truncation", async () => {
+  it("ends the run on a context-window stop, counting it as a truncation, without another call", async () => {
     const cut = toolUse("simulate", { note: "trunc" }) as Anthropic.ToolUseBlock;
     const { api, calls } = fake([
       reply([cut], "model_context_window_exceeded"),
       reply([toolUse("simulate", goldenDominoes)]),
     ]);
     const run = await runAgent("turn off the light", { api });
-    expect(run.outcome).toBe("success");
+    expect(run.outcome).toBe("context_full");
     expect(run.truncations).toBe(1);
-    expect(run.attempts).toHaveLength(1);
-    const result = lastUserContent(calls[1]!) as Anthropic.ToolResultBlockParam[];
-    expect(result[0]!.tool_use_id).toBe(cut.id);
-    expect(result[0]!.is_error).toBe(true);
+    expect(run.attempts).toHaveLength(0);
+    expect(run.error).toBeUndefined();
+    expect(calls).toHaveLength(1);
   });
 
   it("reports zero truncations when nothing was cut off", async () => {

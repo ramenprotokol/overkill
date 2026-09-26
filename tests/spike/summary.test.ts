@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RunOutcome, RunRecord } from "../../src/agent/loop.js";
 import type { AttemptReport } from "../../src/core/trace.js";
-import { median, percentile, renderMarkdown, summarize } from "../../src/spike/summary.js";
+import { median, percentile, provisionalCauses, renderMarkdown, summarize } from "../../src/spike/summary.js";
 
 const run = (outcome: RunOutcome, attempts: number, wallMs = 60_000, score = 6): RunRecord => ({
   chore: "turn off the light", outcome, previews: 0, turns: attempts, truncations: 0, wallMs,
@@ -87,6 +87,15 @@ describe("summarize", () => {
     expect(s.p95WallMs).toBe(60_000);
     expect(s.successRate).toBeCloseTo(0.4);
     expect(s.outcomes).toEqual({ success: 2, api_error: 3 });
+  });
+
+  it("counts a context_full run as a failure with its run time, not as an API error", () => {
+    const full = run("context_full", 5, 90_000);
+    const s = summarize([run("success", 2, 60_000), full]);
+    expect(s.successRate).toBeCloseTo(0.5);
+    expect(s.outcomes).toEqual({ success: 1, context_full: 1 });
+    expect(s.p95WallMs).toBe(90_000);
+    expect(provisionalCauses([full], { stoppedByCap: false, stoppedByApiError: false })).toEqual([]);
   });
 
   it("keeps a slow api_error out of p95", () => {

@@ -1,7 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { parseBlueprint, type Blueprint } from "../core/blueprint.js";
 import { ENGINE } from "../core/constants.js";
-import { preview } from "../core/preview.js";
+import { blueprintBodies } from "../core/geometry.js";
+import { findOverlaps, preview } from "../core/preview.js";
 import { runSim } from "../core/sim.js";
 import { analyze, type AttemptReport } from "../core/trace.js";
 import { addUsage, emptyUsage, type Usage } from "./cost.js";
@@ -24,7 +25,8 @@ export interface AttemptRecord {
   traceHash: string | null;
 }
 
-export type RunOutcome = "success" | "gave_up" | "out_of_attempts" | "turn_limit" | "refused" | "api_error";
+/** `context_full`: the conversation filled the model's context window, so no further call could succeed. */
+export type RunOutcome = "success" | "gave_up" | "out_of_attempts" | "turn_limit" | "refused" | "api_error" | "context_full";
 
 export interface RunRecord {
   chore: string;
@@ -111,10 +113,16 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
       outcome = "refused";
       break;
     }
+    if (res.stop_reason === "model_context_window_exceeded") {
+      // History is append-only, so the next request would be even longer and the API would reject it.
+      truncations++;
+      outcome = "context_full";
+      break;
+    }
     messages.push({ role: "assistant", content: res.content });
     const call = res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
 
-    if (res.stop_reason === "max_tokens" || res.stop_reason === "model_context_window_exceeded") {
+    if (res.stop_reason === "max_tokens") {
       truncations++;
       if (call) messages.push(toolResult(call.id, "Your reply was cut off before the blueprint was complete. Send it again, shorter.", true));
       else messages.push({ role: "user", content: "Your reply was cut off. Continue with a tool call." });
@@ -154,9 +162,14 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
     previewsThisAttempt = 0;
     const n = attempts.length + 1;
     const parsed = parseBlueprint(call.input);
+    // Parts that start overlapping get flung apart by the engine, so an overlapping blueprint is invalid, not simulated.
+    const overlaps = parsed.ok ? findOverlaps(blueprintBodies(parsed.blueprint)) : [];
     if (!parsed.ok) {
       record({ attempt: n, blueprint: null, report: null, errors: parsed.errors, note: "", traceHash: null });
       messages.push(toolResult(call.id, formatInvalid(n, maxAttempts, parsed.errors), true));
+    } else if (overlaps.length > 0) {
+      record({ attempt: n, blueprint: parsed.blueprint, report: null, errors: overlaps, note: parsed.blueprint.note, traceHash: null });
+      messages.push(toolResult(call.id, formatInvalid(n, maxAttempts, overlaps), true));
     } else {
       const sim = runSim(parsed.blueprint);
       const report = analyze(parsed.blueprint, sim);
