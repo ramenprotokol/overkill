@@ -24,11 +24,13 @@ npm test
 Uses real API calls and costs money. Needs an Anthropic API key in `RAMEN_ANTHROPIC_API_KEY`, ideally in a workspace with a spend limit.
 
 ```bash
-npm run spike -- --limit 2 --max-cost 5   # smoke test
-npm run spike                              # all 20 chores, stops at $30
+npm run spike -- --limit 2 --max-cost 10   # smoke test
+npm run spike                               # all 20 chores, cost cap $30
 ```
 
-Results are written to `results/<timestamp>/` (`runs.jsonl` and `summary.md`).
+The spike stops making calls before the next call could take spending past the cap (`--max-cost`, default $30). A run cut off by the cap is reported separately and the verdict is marked provisional.
+
+Results are written to `results/<timestamp>/` (`runs.jsonl` and `summary.md`). `summary.md` is rewritten after every chore, so an interrupted spike keeps its report.
 
 ## Built with
 

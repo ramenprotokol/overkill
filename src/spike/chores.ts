@@ -1,13 +1,15 @@
-/** The fixed eval set: four chores per finale kind. Changing it invalidates comparisons with earlier runs. */
+/**
+ * The fixed eval set: four chores per finale kind, in rounds of [switch, bowl, bell, door, plant] so that any
+ * prefix (a --limit run, or a spike stopped by the cost cap) still samples every kind about evenly.
+ * Changing the set or its order invalidates comparisons with earlier runs.
+ */
 export const CHORES: string[] = [
-  // switch
-  "turn off the light", "start the coffee machine", "turn on the fan", "mute the TV",
-  // bowl
-  "feed the cat", "fill the dog's bowl", "serve breakfast cereal", "give the goldfish a snack",
-  // bell
-  "ring the dinner bell", "wake up my roommate", "announce that the laundry is done", "call everyone to the meeting",
-  // door
-  "close the door", "open the fridge", "shut the cupboard", "let the dog out",
-  // plant
-  "water the plant", "give the cactus a drink", "mist the fern", "water the tomatoes",
+  // round 1
+  "turn off the light", "feed the cat", "ring the dinner bell", "close the door", "water the plant",
+  // round 2
+  "start the coffee machine", "fill the dog's bowl", "wake up my roommate", "open the fridge", "give the cactus a drink",
+  // round 3
+  "turn on the fan", "serve breakfast cereal", "announce that the laundry is done", "shut the cupboard", "mist the fern",
+  // round 4
+  "mute the TV", "give the goldfish a snack", "call everyone to the meeting", "let the dog out", "water the tomatoes",
 ];

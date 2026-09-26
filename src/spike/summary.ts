@@ -19,6 +19,20 @@ export interface SpikeSummary {
   reasons: string[];
 }
 
+export interface ReportMeta {
+  model: string;
+  effort: string;
+  maxAttempts: number;
+  /** Chores the spike set out to run. */
+  planned: number;
+  maxCost: number;
+  /** Everything billed, including a run cut off by the cap (which is not in the summarized runs). */
+  spentUsd: number;
+  /** The chore that was running when the cap hit, if any. */
+  cutOff: string | null;
+  stoppedByCap: boolean;
+}
+
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const sec = (ms: number) => `${(ms / 1000).toFixed(0)} s`;
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -31,10 +45,18 @@ export function percentile(values: number[], p: number): number {
   return sorted[idx]!;
 }
 
-export function summarize(runs: RunRecord[]): SpikeSummary {
+/** Median that takes the upper middle for an even count, so a gate is never passed on the kinder half; 0 for an empty list. */
+export function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)]!;
+}
+
+export function summarize(runs: RunRecord[], planned = runs.length): SpikeSummary {
   const ok = runs.filter((r) => r.outcome === "success");
   const attemptsToSuccess = ok.map((r) => r.attempts.length);
-  const walls = runs.map((r) => r.wallMs);
+  // An api_error run stopped on the network, not on the model, so its time says nothing about run time.
+  const walls = runs.filter((r) => r.outcome !== "api_error").map((r) => r.wallMs);
   const costs = runs.map((r) => costUsd(r.usage));
   const scores = ok.map((r) => r.attempts.at(-1)?.report?.overkillScore ?? 0);
 
@@ -44,11 +66,12 @@ export function summarize(runs: RunRecord[]): SpikeSummary {
   for (const r of runs) outcomes[r.outcome] = (outcomes[r.outcome] ?? 0) + 1;
 
   const successRate = runs.length > 0 ? ok.length / runs.length : 0;
-  const medianAttempts = ok.length > 0 ? percentile(attemptsToSuccess, 50) : null;
-  const p50WallMs = percentile(walls, 50);
+  const medianAttempts = ok.length > 0 ? median(attemptsToSuccess) : null;
+  const p50WallMs = median(walls);
   const p95WallMs = percentile(walls, 95);
 
   const reasons: string[] = [];
+  if (runs.length < planned) reasons.push(`only ${runs.length} of ${planned} chores ran`);
   if (successRate < 0.6) reasons.push(`success rate ${pct(successRate)} is below 60%`);
   if (medianAttempts === null || medianAttempts > 6) reasons.push(`median attempts ${medianAttempts ?? "n/a"} is above 6`);
   if (p50WallMs >= 120_000) reasons.push(`p50 run time ${sec(p50WallMs)} is not under 2 minutes`);
@@ -73,11 +96,16 @@ export function summarize(runs: RunRecord[]): SpikeSummary {
   };
 }
 
-export function renderMarkdown(s: SpikeSummary, runs: RunRecord[], meta: { model: string; effort: string; maxAttempts: number }): string {
+export function renderMarkdown(s: SpikeSummary, runs: RunRecord[], meta: ReportMeta): string {
+  const capNote = meta.stoppedByCap
+    ? ` — stopped by the $${meta.maxCost} cost cap${meta.cutOff !== null ? `, cut off during "${meta.cutOff}"` : ""}; this verdict is provisional`
+    : "";
+  const errors = runs.filter((r) => r.error !== undefined);
   const lines = [
     "# OVERKILL spike results",
     "",
     `- Model: \`${meta.model}\` (effort \`${meta.effort}\`), attempt cap ${meta.maxAttempts}`,
+    `- Coverage: ${s.runs} of ${meta.planned} chores${capNote}`,
     `- Verdict: **${s.verdict}**${s.reasons.length > 0 ? ` — ${s.reasons.join("; ")}` : ""}`,
     "",
     "| Metric | Value |",
@@ -89,6 +117,7 @@ export function renderMarkdown(s: SpikeSummary, runs: RunRecord[], meta: { model
     `| Run time p50 / p95 | ${sec(s.p50WallMs)} / ${sec(s.p95WallMs)} |`,
     `| Cost per run (mean) | $${s.meanCostUsd.toFixed(3)} |`,
     `| Total cost | $${s.totalCostUsd.toFixed(2)} |`,
+    `| Spent (all calls, including any cut-off run) | $${meta.spentUsd.toFixed(2)} |`,
     `| Truncated replies | ${s.truncations} |`,
     "",
     "## Attempts to success",
@@ -105,8 +134,11 @@ export function renderMarkdown(s: SpikeSummary, runs: RunRecord[], meta: { model
     "",
     "| Chore | Outcome | Attempts | Overkill | Time | Cost |",
     "|---|---|---|---|---|---|",
-    ...runs.map((r) =>
-      `| ${r.chore} | ${r.outcome} | ${r.attempts.length} | ${r.attempts.at(-1)?.report?.overkillScore ?? 0} | ${sec(r.wallMs)} | $${costUsd(r.usage).toFixed(3)} |`),
+    ...runs.map((r) => {
+      const overkill = r.outcome === "success" ? (r.attempts.at(-1)?.report?.overkillScore ?? 0) : "–";
+      return `| ${r.chore} | ${r.outcome} | ${r.attempts.length} | ${overkill} | ${sec(r.wallMs)} | $${costUsd(r.usage).toFixed(3)} |`;
+    }),
+    ...(errors.length > 0 ? ["", "## Errors", "", ...errors.map((r) => `- ${r.chore}: ${r.error}`)] : []),
   ];
   return lines.join("\n") + "\n";
 }
