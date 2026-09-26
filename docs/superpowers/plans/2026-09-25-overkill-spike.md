@@ -1530,7 +1530,7 @@ export const SYSTEM_PROMPT = `You design absurd chain-reaction machines that per
 ## How a run works
 - The machine starts when the first push rolls one ball left or right (soft, medium or hard).
 - A run lasts 20 simulated seconds.
-- A part joins the chain when a part already in the chain hits it and it starts moving. Parts that fall or roll on their own never join the chain.
+- A part joins the chain when a part already in the chain touches it (a new hit, or a part it was already resting on) and it then starts moving. Parts that fall or roll on their own never join the chain.
 - Success means a part in the chain touches the finale and the chain from the pushed ball to that part has at least ${MIN_CHAIN_PARTS} parts. A shorter chain is "not overkill enough" and does not count.
 
 ## Rules
@@ -2349,3 +2349,14 @@ RAMEN_ANTHROPIC_API_KEY=… npm run spike -- --effort medium
 - Add the verdict, chosen effort and measured attempt distribution to spec §10, and set the final attempt cap from that distribution.
 - Privacy gate, then commit: `docs: record spike results`.
 - The next plan (Worker, Durable Object, web) starts from this verdict. It also covers the spec §10 items this plan can't: one full loop on a deployed Worker and a Worker-vs-browser determinism check.
+
+---
+
+## Amendments during execution (2026-09-25)
+
+Approved by the controller after task reviews; the code and tests on `feat/spike` follow these, not the original task text above.
+
+1. **Task 3 — preview:** `findFloating` and `findUnreachable` use real part shapes instead of body centres (nudge-down penetration for support; the domino's box widened to ±1.7 for reach). Four hand-built-body tests added.
+2. **Task 5 — trace, round 1:** a finale hit only counts if the hitting part had already joined the chain at that step. Outside-hitter summary is now `Not overkill enough: <id> hit the finale on its own, before the chain reached it.`
+3. **Task 4/5 — sim + trace, round 2:** the sim also records contact intervals (`contacts`, start/stop, floor excluded) and per-part moving intervals (`moving`); `SimEvent` drops `aMoves`/`bMoves`. The trace grows the chain earliest-first over contact intervals: a part joins from a chain part it touches — fresh hit or resting contact — when it starts moving during the contact or within `MOVE_WINDOW` steps after; parts already moving on their own can't join. The finale is triggered by the first *moving* part that touches it, and only counts if that part was already in the chain. This fixes launched-from-rest parts (e.g. a ball on a seesaw) and same-step event ordering.
+4. **Task 6 — prompt:** the chain rule sentence reads "touches it (a new hit, or a part it was already resting on) and it then starts moving".
