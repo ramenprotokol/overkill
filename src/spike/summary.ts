@@ -23,8 +23,10 @@ export interface ReportMeta {
   model: string;
   effort: string;
   maxAttempts: number;
-  /** Chores the spike set out to run. */
+  /** The full eval set: every gate is judged against this, so a --limit run can never be GO. */
   planned: number;
+  /** Chores this run was limited to (--limit); equal to planned for a full run. */
+  limit: number;
   maxCost: number;
   /** Everything billed, including a run cut off by the cap (which is not in the summarized runs). */
   spentUsd: number;
@@ -128,7 +130,7 @@ export function renderMarkdown(s: SpikeSummary, runs: RunRecord[], meta: ReportM
     "# OVERKILL spike results",
     "",
     `- Model: \`${meta.model}\` (effort \`${meta.effort}\`), attempt cap ${meta.maxAttempts}`,
-    `- Coverage: ${s.runs} of ${meta.planned} chores${stopNote}`,
+    `- Coverage: ${s.runs} of ${meta.planned} chores${meta.limit < meta.planned ? ` (--limit ${meta.limit})` : ""}${stopNote}`,
     `- Verdict: ${verdict}`,
     "",
     "| Metric | Value |",

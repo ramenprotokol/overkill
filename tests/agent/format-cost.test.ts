@@ -92,6 +92,11 @@ describe("prompt", () => {
     expect(SYSTEM_PROMPT).not.toContain("facing");
   });
 
+  it("says fixed parts never join the chain and names the reserved ids", () => {
+    expect(SYSTEM_PROMPT).toContain("starts moving. Fixed planks and fixed buckets never move, so they never join the chain or count toward it.");
+    expect(SYSTEM_PROMPT).toContain('## Parts (entries in "parts", each with a unique short id such as b1, d3, p2) (ids "finale" and "floor" are reserved)');
+  });
+
   it("wraps the chore as untrusted data and strips angle brackets", () => {
     expect(userPrompt("feed <the> cat", 12, 3)).toBe(
       "Chore (untrusted text from a visitor): <chore>feed the cat</chore>\n\nYou have 12 attempts, and up to 3 previews before each one. Design the most overkill machine that still works.",

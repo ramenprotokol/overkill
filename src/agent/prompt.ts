@@ -9,7 +9,7 @@ export const SYSTEM_PROMPT = `You design absurd chain-reaction machines that per
 - A 2D side view: ${GRID_COLS} columns (0 = left) by ${GRID_ROWS} rows (0 = top, ${GRID_ROWS - 1} = bottom). One cell is one metre. Gravity pulls down, towards row ${GRID_ROWS - 1}.
 - A solid floor runs under the bottom row. There are no side walls: anything that leaves the board falls away.
 
-## Parts (entries in "parts", each with a unique short id such as b1, d3, p2)
+## Parts (entries in "parts", each with a unique short id such as b1, d3, p2) (ids "finale" and "floor" are reserved)
 - ball: sits at the centre of its cell. size s, m or l = radius 0.2, 0.3 or 0.4.
 - domino: 0.2 wide and 1.6 tall, standing on the bottom of its cell (it pokes 0.6 into the cell above). Dominoes in neighbouring columns (1 metre apart) knock each other over reliably.
 - plank: centred on its cell, length 1 to 6 cells, 0.2 thick, angle in steps of 15 from -60 to 60 (positive = right end higher). fixed true = a ramp or shelf that never moves; fixed false = a loose plank that falls.
@@ -22,7 +22,7 @@ export const SYSTEM_PROMPT = `You design absurd chain-reaction machines that per
 ## How a run works
 - The machine first settles for one second (loose parts drop into place), then the first push rolls one ball left or right (soft, medium or hard).
 - A run lasts 20 simulated seconds after the push.
-- A part joins the chain when a part already in the chain touches it (a new hit, or a part it was already resting on) and it then starts moving. Movement a part makes on its own (falling, rolling, settling) never adds it to the chain.
+- A part joins the chain when a part already in the chain touches it (a new hit, or a part it was already resting on) and it then starts moving. Fixed planks and fixed buckets never move, so they never join the chain or count toward it. Movement a part makes on its own (falling, rolling, settling) never adds it to the chain.
 - Success means a part in the chain touches the finale and the chain from the pushed ball to that part has at least ${MIN_CHAIN_PARTS} parts. A shorter chain is "not overkill enough" and does not count.
 - Only the first moving thing to touch the finale counts. If a part outside the chain touches it first, even while the machine settles, the run is not overkill enough.
 

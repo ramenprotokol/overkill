@@ -36,7 +36,7 @@ What counts toward the cap:
 - A reply whose stream breaks or hits the 10-minute call timeout: the input and cache tokens reported when the stream started, plus a full 64k tokens of output. The real output count only arrives at the end of the stream, so the spike assumes the most it could have been.
 - A call that fails before the API reports any usage: nothing.
 
-A run cut off by the cap is reported separately. The verdict is marked provisional when the cost cap or an API rejection stops the spike, or when any run ends in an API error (including a timeout). With no completed runs there is no verdict.
+A run cut off by the cap is reported separately. The verdict is marked provisional when the cost cap or an API rejection stops the spike, or when any run ends in an API error (including a timeout). With no completed runs there is no verdict. A `--limit` run is judged against all 20 chores, so it is never GO.
 
 Results are written to `results/<timestamp>/` (`runs.jsonl` and `summary.md`). `summary.md` is rewritten after every chore, so an interrupted spike keeps its report.
 

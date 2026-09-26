@@ -116,7 +116,7 @@ describe("summarize", () => {
 
 const META = {
   model: "claude-opus-5-5", effort: "high", maxAttempts: 12,
-  planned: 2, maxCost: 30, spentUsd: 0.28, cutOff: null, stoppedByCap: false, stoppedByApiError: false,
+  planned: 2, limit: 2, maxCost: 30, spentUsd: 0.28, cutOff: null, stoppedByCap: false, stoppedByApiError: false,
 };
 
 describe("renderMarkdown", () => {
@@ -132,15 +132,25 @@ describe("renderMarkdown", () => {
     expect(md).toContain("| turn off the light | success | 3 | 6 | 60 s | $0.140 |");
   });
 
+  it("never says GO on a --limit run, and shows both the limit and the full set", () => {
+    const runs = [run("success", 3), run("success", 3)];
+    const s = summarize(runs, 20);
+    expect(s.verdict).not.toBe("GO");
+    expect(s.reasons).toEqual(["only 2 of 20 chores ran"]);
+    const md = renderMarkdown(s, runs, { ...META, planned: 20, limit: 2 });
+    expect(md).toContain("- Coverage: 2 of 20 chores (--limit 2)\n");
+    expect(md).toContain("- Verdict: **SHIP_AS_STRUGGLE** — only 2 of 20 chores ran\n");
+  });
+
   it("shows no overkill score for a run that did not succeed", () => {
     const runs = [run("gave_up", 4)];
-    const md = renderMarkdown(summarize(runs), runs, { ...META, planned: 1 });
+    const md = renderMarkdown(summarize(runs), runs, { ...META, planned: 1, limit: 1 });
     expect(md).toContain("| turn off the light | gave_up | 4 | – | 60 s | $0.140 |");
   });
 
   it("marks the verdict provisional when the cost cap stopped the spike", () => {
     const runs = [run("success", 3), run("success", 3)];
-    const md = renderMarkdown(summarize(runs, 5), runs, { ...META, planned: 5, spentUsd: 29.1, cutOff: "mist the fern", stoppedByCap: true });
+    const md = renderMarkdown(summarize(runs, 5), runs, { ...META, planned: 5, limit: 5, spentUsd: 29.1, cutOff: "mist the fern", stoppedByCap: true });
     expect(md).toContain('- Coverage: 2 of 5 chores — stopped by the $30 cost cap, cut off during "mist the fern"; this verdict is provisional');
     expect(md).toContain("- Verdict: **SHIP_AS_STRUGGLE** (provisional: the cost cap stopped the spike) — only 2 of 5 chores ran\n");
     expect(md).toContain("| Spent (all calls, including any cut-off run) | $29.10 |");
@@ -155,13 +165,13 @@ describe("renderMarkdown", () => {
 
   it("marks the verdict provisional when an API rejection stopped the spike", () => {
     const runs = [run("success", 3), { ...run("api_error", 0, 1_000), chore: "mist the fern", error: "401 invalid x-api-key" }];
-    const md = renderMarkdown(summarize(runs, 5), runs, { ...META, planned: 5, stoppedByApiError: true });
+    const md = renderMarkdown(summarize(runs, 5), runs, { ...META, planned: 5, limit: 5, stoppedByApiError: true });
     expect(md).toContain("- Coverage: 2 of 5 chores — stopped by an API rejection; this verdict is provisional\n");
     expect(md).toContain("- Verdict: **SHIP_AS_STRUGGLE** (provisional: an API rejection stopped the spike; 1 run ended in an API error) — ");
   });
 
   it("gives no verdict when no runs completed", () => {
-    const md = renderMarkdown(summarize([], 3), [], { ...META, planned: 3, stoppedByCap: true });
+    const md = renderMarkdown(summarize([], 3), [], { ...META, planned: 3, limit: 3, stoppedByCap: true });
     expect(md).toContain("- Verdict: **NO VERDICT** — no runs completed\n");
     expect(md).not.toContain("CHANGE_INTERFACE");
     expect(md).not.toContain("SHIP_AS_STRUGGLE");
@@ -169,7 +179,7 @@ describe("renderMarkdown", () => {
 
   it("marks the cap without a cut-off chore when the cap was hit between chores", () => {
     const runs = [run("success", 3)];
-    const md = renderMarkdown(summarize(runs, 5), runs, { ...META, planned: 5, stoppedByCap: true });
+    const md = renderMarkdown(summarize(runs, 5), runs, { ...META, planned: 5, limit: 5, stoppedByCap: true });
     expect(md).toContain("- Coverage: 1 of 5 chores — stopped by the $30 cost cap; this verdict is provisional");
   });
 
@@ -181,6 +191,6 @@ describe("renderMarkdown", () => {
 
   it("has no Errors section when nothing failed with an error", () => {
     const runs = [run("success", 3)];
-    expect(renderMarkdown(summarize(runs), runs, { ...META, planned: 1 })).not.toContain("## Errors");
+    expect(renderMarkdown(summarize(runs), runs, { ...META, planned: 1, limit: 1 })).not.toContain("## Errors");
   });
 });

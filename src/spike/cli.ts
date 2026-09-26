@@ -66,7 +66,8 @@ async function main(): Promise<void> {
   const dir = join(opts.out, new Date().toISOString().replace(/[:.]/g, "-"));
   mkdirSync(dir, { recursive: true });
   const summaryPath = join(dir, "summary.md");
-  const planned = CHORES.slice(0, opts.limit);
+  // Gates are judged against the full eval set, so a --limit run reports "only N of 20 chores ran" and is never GO.
+  const chores = CHORES.slice(0, opts.limit);
 
   const runs: RunRecord[] = [];
   let cutOff: string | null = null;
@@ -76,16 +77,17 @@ async function main(): Promise<void> {
     model: runs[0]?.model ?? DEFAULT_MODEL,
     effort: opts.effort,
     maxAttempts: opts.maxAttempts,
-    planned: planned.length,
+    planned: CHORES.length,
+    limit: chores.length,
     maxCost: opts.maxCost,
     spentUsd: capped.spent(),
     cutOff,
     stoppedByCap,
     stoppedByApiError,
   });
-  const writeSummary = () => writeFileSync(summaryPath, renderMarkdown(summarize(runs, planned.length), runs, meta()));
+  const writeSummary = () => writeFileSync(summaryPath, renderMarkdown(summarize(runs, CHORES.length), runs, meta()));
 
-  for (const chore of planned) {
+  for (const chore of chores) {
     if (capped.spent() + WORST_CALL_USD > opts.maxCost) {
       stoppedByCap = true;
       console.log(`Stopping: $${capped.spent().toFixed(2)} spent, and one more call (up to $${WORST_CALL_USD}) could pass the $${opts.maxCost} cap.`);
@@ -126,7 +128,7 @@ async function main(): Promise<void> {
   const verdict =
     runs.length === 0
       ? "NO VERDICT (no runs completed)"
-      : `${summarize(runs, planned.length).verdict}${causes.length > 0 ? ` (provisional: ${causes.join("; ")})` : ""}`;
+      : `${summarize(runs, CHORES.length).verdict}${causes.length > 0 ? ` (provisional: ${causes.join("; ")})` : ""}`;
   console.log(`\nVerdict: ${verdict}. Spent $${capped.spent().toFixed(2)}. Summary: ${summaryPath}`);
 }
 
