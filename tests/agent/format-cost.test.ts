@@ -87,6 +87,7 @@ describe("prompt", () => {
     expect(SYSTEM_PROMPT).toContain("16 columns");
     expect(SYSTEM_PROMPT).toContain("settles for one second");
     expect(SYSTEM_PROMPT).toContain("Only the first moving thing to touch the finale counts");
+    expect(SYSTEM_PROMPT).toContain("The machine must need the push");
     expect(SYSTEM_PROMPT).toContain('not an entry in "parts"');
     expect(SYSTEM_PROMPT).toContain("up to 140 characters");
     expect(SYSTEM_PROMPT).not.toContain("facing");

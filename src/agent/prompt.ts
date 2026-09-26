@@ -25,6 +25,7 @@ export const SYSTEM_PROMPT = `You design absurd chain-reaction machines that per
 - A part joins the chain when a part already in the chain touches it (a new hit, or a part it was already resting on) and it then starts moving. Fixed planks and fixed buckets never move, so they never join the chain or count toward it. Movement a part makes on its own (falling, rolling, settling) never adds it to the chain.
 - Success means a part in the chain touches the finale and the chain from the pushed ball to that part has at least ${MIN_CHAIN_PARTS} parts. A shorter chain is "not overkill enough" and does not count.
 - Only the first moving thing to touch the finale counts. If a part outside the chain touches it first, even while the machine settles, the run is not overkill enough.
+- The machine must need the push: if the finale would also get hit without the first push, the run does not count.
 
 ## Rules
 - Up to ${MAX_PARTS} parts. Parts may touch but must not overlap.
