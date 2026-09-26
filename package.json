@@ -1,0 +1,27 @@
+{
+  "name": "overkill",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Claude Opus 5.5 overengineers your chores as chain-reaction machines, then has to prove they work in a physics sim.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "spike": "tsx src/spike/cli.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.128.0",
+    "@dimforge/rapier2d-deterministic-compat": "0.21.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
+  }
+}

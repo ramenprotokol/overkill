@@ -22,3 +22,6 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# Spike run output (raw runs stay local; curated summaries get committed)
+results/
