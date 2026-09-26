@@ -42,6 +42,9 @@ export const BlueprintSchema = z.strictObject({
   parts: z.array(PartSchema).min(1).max(MAX_PARTS),
 });
 
+/** Names the simulator uses for its own bodies; a part with one of these ids would be confused with them. */
+const RESERVED_IDS = new Set(["finale", "floor"]);
+
 export type Blueprint = z.infer<typeof BlueprintSchema>;
 export type Part = z.infer<typeof PartSchema>;
 export type ValidationResult = { ok: true; blueprint: Blueprint } | { ok: false; errors: string[] };
@@ -60,6 +63,7 @@ export function parseBlueprint(input: unknown): ValidationResult {
   const seen = new Set<string>();
   for (const p of bp.parts) {
     if (seen.has(p.id)) errors.push(`parts: duplicate id "${p.id}"`);
+    if (RESERVED_IDS.has(p.id)) errors.push(`parts: "${p.id}" is a reserved id`);
     seen.add(p.id);
   }
   const pushed = bp.parts.find((p) => p.id === bp.firstPush.ball);

@@ -55,6 +55,12 @@ describe("parseBlueprint", () => {
     for (let i = 0; i < 25; i++) bad.parts.push({ id: `x${i}`, kind: "domino", col: i % 16, row: 0 });
     expect(errorsOf(bad)).toMatch(/parts/);
   });
+
+  it("rejects the ids the simulator reserves", () => {
+    const bad = structuredClone(goldenDominoes);
+    bad.parts[1]!.id = "finale";
+    expect(errorsOf(bad)).toContain('parts: "finale" is a reserved id');
+  });
 });
 
 describe("blueprintJsonSchema", () => {

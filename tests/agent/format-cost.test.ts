@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { addUsage, costUsd, emptyUsage } from "../../src/agent/cost.js";
 import { formatInvalid, formatPreview, formatReport } from "../../src/agent/format.js";
 import { SYSTEM_PROMPT, TOOLS, userPrompt } from "../../src/agent/prompt.js";
+import { blueprintJsonSchema } from "../../src/core/blueprint.js";
 import type { AttemptReport } from "../../src/core/trace.js";
 
 const missed: AttemptReport = {
@@ -19,6 +20,15 @@ describe("formatReport", () => {
       "Fell off the board: b1.",
       "Attempts left: 9.",
     ].join("\n"));
+  });
+
+  it("reports a success without loose ends or attempts left", () => {
+    const won: AttemptReport = {
+      outcome: "success", success: true, chain: ["b1", "d1", "d2", "d3", "d4", "d5"], overkillScore: 6, finaleHitBy: "d5", stoppedAt: null,
+      closest: { part: "d5", cells: 0 }, neverMoved: [], fellOff: [],
+      summary: "Success: 6-part chain b1 → d1 → d2 → d3 → d4 → d5 → finale.",
+    };
+    expect(formatReport(4, 12, won)).toBe("Attempt 4 of 12: SUCCESS\nSuccess: 6-part chain b1 → d1 → d2 → d3 → d4 → d5 → finale.");
   });
 
   it("writes not_overkill as two words", () => {
@@ -51,6 +61,11 @@ describe("cost", () => {
     expect(u).toEqual({ input: 10, output: 5, cacheWrite: 0, cacheRead: 7 });
   });
 
+  it("adds usage twice when the cache fields are absent", () => {
+    const u = addUsage(addUsage(emptyUsage(), { input_tokens: 10, output_tokens: 5 }), { input_tokens: 1, output_tokens: 2, cache_read_input_tokens: 3 });
+    expect(u).toEqual({ input: 11, output: 7, cacheWrite: 0, cacheRead: 3 });
+  });
+
   it("prices Opus 5.5 tokens", () => {
     expect(costUsd({ input: 1e6, output: 1e6, cacheWrite: 1e6, cacheRead: 1e6 })).toBeCloseTo(4 + 20 + 5 + 0.2);
   });
@@ -62,14 +77,24 @@ describe("prompt", () => {
     expect(TOOLS[0]!.input_schema.type).toBe("object");
   });
 
+  it("gives both tools the same generated schema", () => {
+    expect(TOOLS[0]!.input_schema).toEqual(blueprintJsonSchema());
+    expect(TOOLS[1]!.input_schema).toEqual(blueprintJsonSchema());
+  });
+
   it("states the overkill rule and the grid in the system prompt", () => {
     expect(SYSTEM_PROMPT).toContain("at least 5 parts");
     expect(SYSTEM_PROMPT).toContain("16 columns");
+    expect(SYSTEM_PROMPT).toContain("settles for one second");
+    expect(SYSTEM_PROMPT).toContain("Only the first moving thing to touch the finale counts");
+    expect(SYSTEM_PROMPT).toContain('not an entry in "parts"');
+    expect(SYSTEM_PROMPT).toContain("up to 140 characters");
+    expect(SYSTEM_PROMPT).not.toContain("facing");
   });
 
   it("wraps the chore as untrusted data and strips angle brackets", () => {
-    expect(userPrompt("feed <the> cat", 12)).toBe(
-      "Chore (untrusted text from a visitor): <chore>feed the cat</chore>\n\nYou have 12 attempts. Design the most overkill machine that still works.",
+    expect(userPrompt("feed <the> cat", 12, 3)).toBe(
+      "Chore (untrusted text from a visitor): <chore>feed the cat</chore>\n\nYou have 12 attempts, and up to 3 previews before each one. Design the most overkill machine that still works.",
     );
   });
 });
