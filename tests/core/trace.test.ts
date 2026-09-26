@@ -111,6 +111,14 @@ describe("analyze (hand-built traces)", () => {
     expect(r.fellOff).toEqual(["b1"]);
     expect(r.summary).toBe("Missed: the chain b1 → d1 → d2 stopped at d2. Closest to the finale: d2 at 1.4 cells.");
   });
+
+  it("counts an impact that stops the part in the same step it touches the finale", () => {
+    const r = analyze(goldenDominoes, sim(
+      [touch("b1", "d1", 1), touch("d1", "d2", 2), touch("d2", "d3", 3), touch("d3", "d4", 4), touch("d4", "d5", 5), touch("d5", "finale", 60)],
+      { b1: [[0, 50]], d1: [[1, 50]], d2: [[2, 50]], d3: [[3, 50]], d4: [[4, 50]], d5: [[5, 60]] },
+    ));
+    expect(r.outcome).toBe("success");
+  });
 });
 
 describe("analyze (real physics)", () => {

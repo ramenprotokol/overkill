@@ -69,8 +69,10 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
   for (const c of sim.contacts) {
     if (c.a !== "finale" && c.b !== "finale") continue;
     const p = c.a === "finale" ? c.b : c.a;
-    const step = firstMovingIn(sim, p, c.from, c.to);
-    if (step === undefined) continue;
+    // The impact itself can stop the part within the contact step, so look one step earlier for its motion.
+    const moving = firstMovingIn(sim, p, c.from - 1, c.to);
+    if (moving === undefined) continue;
+    const step = Math.max(moving, c.from);
     const inChain = (joinedAt.get(p) ?? Infinity) <= step;
     const better = !trigger || step < trigger.step || (step === trigger.step && (inChain !== trigger.inChain ? inChain : p < trigger.by));
     if (better) trigger = { by: p, step, inChain };
