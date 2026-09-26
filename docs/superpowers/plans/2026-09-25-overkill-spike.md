@@ -2328,10 +2328,10 @@ This task spends real money and needs credentials only the owner can create. An 
 - A Ramen Protocol Anthropic account and API key, with a workspace spend limit set.
 - The owner approves the budget (`--max-cost`, default $30).
 
-- [ ] **Step 1: Smoke run (2 chores, $5 cap)**
+- [ ] **Step 1: Smoke run (2 chores, $10 cap)**
 
 ```bash
-RAMEN_ANTHROPIC_API_KEY=… npm run spike -- --limit 2 --max-cost 5
+RAMEN_ANTHROPIC_API_KEY=… npm run spike -- --limit 2 --max-cost 10
 ```
 Expected: two runs complete with any outcome; `cache reads` is above 0 on runs with more than one turn (if it is 0, the prompt prefix is changing between calls — fix that before the full run).
 
@@ -2371,3 +2371,4 @@ Approved by the controller after task reviews; the code and tests on `feat/spike
 7. **Task 7 — loop:** passes `maxPreviews` to `userPrompt`; default `maxTurns` is 60 (12 attempts × (3 previews + 1 simulate) fits).
 8. **Task 7 — loop hardening (after review):** `max_tokens` 64000 (callers stream); `RunRecord.truncations` counts cut-off replies; an empty reply ends the run as `gave_up`; default `maxTurns = maxAttempts × (maxPreviews + 1) + 12`; API error text is the SDK message alone.
 9. **Task 8 — CLI/summary:** the CLI calls `client.messages.stream(body).finalMessage()`; `SpikeSummary.truncations` totals cut-off replies and the markdown report shows it; the per-run console line prints truncations.
+10. **Task 8 — money safety and honest reporting (after review):** flags are validated before anything else (`src/spike/options.ts`); the cost cap is enforced before every API call (worst case $2 per call, in the tested `src/spike/capped-api.ts`) with a 10-minute per-call timeout; the client ignores other credentials and endpoints in the environment (`authToken: null`, fixed `baseURL`, `ANTHROPIC_CUSTOM_HEADERS` removed); a run cut off by the cap is excluded from the verdict and flagged; 400/401/403 stop the spike; `summary.md` is rewritten after every chore with coverage, spend, errors and a provisional note when capped; gate medians use the upper middle; `api_error` runs are left out of run-time percentiles; chores are interleaved by finale kind. Task 9's smoke run uses `--max-cost 10`.
