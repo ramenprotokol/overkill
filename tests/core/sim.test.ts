@@ -1,0 +1,45 @@
+import { readFileSync } from "node:fs";
+import { beforeAll, describe, expect, it } from "vitest";
+import { ENGINE } from "../../src/core/constants.js";
+import { initPhysics, runSim } from "../../src/core/sim.js";
+import { dudMachine, goldenDominoes, seesawDrop, shortChain } from "../fixtures/golden.js";
+
+beforeAll(async () => {
+  await initPhysics();
+});
+
+describe("runSim", () => {
+  it("runs the golden machine into the finale via every domino", () => {
+    const r = runSim(goldenDominoes);
+    expect(r.finaleHit?.by).toBe("d5");
+    const pairs = r.events.map((e) => `${e.a}-${e.b}`);
+    for (const p of ["b1-d1", "d1-d2", "d2-d3", "d3-d4", "d4-d5", "d5-finale"]) expect(pairs).toContain(p);
+  });
+
+  it("is deterministic: the same blueprint gives the same hash", () => {
+    expect(runSim(goldenDominoes).hash).toBe(runSim(goldenDominoes).hash);
+  });
+
+  it("gives different machines different hashes", () => {
+    expect(runSim(goldenDominoes).hash).not.toBe(runSim(shortChain).hash);
+  });
+
+  it("lets a ball pushed away from everything roll off the board", () => {
+    const r = runSim(dudMachine);
+    expect(r.finaleHit).toBeNull();
+    expect(r.parts.b1!.end.y).toBeLessThan(-1);
+    expect(r.parts.d1!.moved).toBe(false);
+  });
+
+  it("tips a seesaw when a ball lands on it", () => {
+    const r = runSim(seesawDrop);
+    expect(r.events.map((e) => `${e.a}-${e.b}`)).toContain("b1-s1");
+    expect(r.parts.s1!.moved).toBe(true);
+  });
+
+  it("names the installed physics engine version", () => {
+    const pkg = JSON.parse(readFileSync("node_modules/@dimforge/rapier2d-deterministic-compat/package.json", "utf8")) as { version: string };
+    expect(ENGINE).toBe(`@dimforge/rapier2d-deterministic-compat@${pkg.version}`);
+    expect(runSim(goldenDominoes).engine).toBe(ENGINE);
+  });
+});
