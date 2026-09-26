@@ -1,4 +1,4 @@
-import type Anthropic from "@anthropic-ai/sdk";
+import Anthropic from "@anthropic-ai/sdk";
 import { beforeAll, describe, expect, it } from "vitest";
 import { runAgent, type MessagesApi } from "../../src/agent/loop.js";
 import { initPhysics } from "../../src/core/sim.js";
@@ -14,11 +14,29 @@ const reply = (content: Anthropic.ContentBlock[], stop_reason: string = "tool_us
     usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 80 },
   }) as unknown as Anthropic.Message;
 
+/** The API rejects a request where an earlier tool_use has no tool_result right after it; enforce that on every call. */
+function assertToolPairing(messages: Anthropic.MessageParam[]) {
+  messages.forEach((m, i) => {
+    if (m.role !== "assistant" || i === messages.length - 1 || typeof m.content === "string") return;
+    const next = messages[i + 1]!;
+    const resultIds =
+      typeof next.content === "string"
+        ? []
+        : next.content.flatMap((b) => (b.type === "tool_result" ? [b.tool_use_id] : []));
+    for (const b of m.content) {
+      if (b.type === "tool_use" && !resultIds.includes(b.id)) {
+        throw new Error(`tool_use ${b.id} in message ${i} has no matching tool_result in message ${i + 1}`);
+      }
+    }
+  });
+}
+
 function fake(responses: Anthropic.Message[]) {
   const calls: Anthropic.MessageCreateParamsNonStreaming[] = [];
   const api: MessagesApi = {
     messages: {
       create: async (body) => {
+        assertToolPairing(body.messages);
         calls.push(structuredClone(body));
         const r = responses.shift();
         if (!r) throw new Error("no more scripted responses");
@@ -128,6 +146,79 @@ describe("runAgent", () => {
     const run = await runAgent("turn off the light", { api });
     expect(run.outcome).toBe("api_error");
     expect(run.error).toBe("Error: boom");
+  });
+
+  it("records an SDK API error by its own message, which already carries the status", async () => {
+    const err = new Anthropic.APIError(529, undefined, "Overloaded", undefined);
+    const api: MessagesApi = { messages: { create: async () => { throw err; } } };
+    const run = await runAgent("turn off the light", { api });
+    expect(run.outcome).toBe("api_error");
+    expect(run.error).toBe(err.message);
+  });
+
+  it("stops with turn_limit when the model keeps previewing", async () => {
+    const { api } = fake([
+      reply([toolUse("preview", goldenDominoes)]),
+      reply([toolUse("preview", goldenDominoes)]),
+      reply([toolUse("preview", goldenDominoes)]),
+    ]);
+    const run = await runAgent("turn off the light", { api, maxTurns: 3 });
+    expect(run.outcome).toBe("turn_limit");
+    expect(run.turns).toBe(3);
+  });
+
+  it("answers an unknown tool with an error and carries on", async () => {
+    const { api, calls } = fake([reply([toolUse("launch", {})]), reply([toolUse("simulate", goldenDominoes)])]);
+    const run = await runAgent("turn off the light", { api });
+    expect(run.outcome).toBe("success");
+    const result = lastUserContent(calls[1]!) as Anthropic.ToolResultBlockParam[];
+    expect(result[0]!.is_error).toBe(true);
+  });
+
+  it("treats an empty reply as giving up", async () => {
+    const { api, calls } = fake([reply([], "end_turn")]);
+    const run = await runAgent("turn off the light", { api });
+    expect(run.outcome).toBe("gave_up");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("counts truncated replies", async () => {
+    const cut = toolUse("simulate", { note: "trunc" }) as Anthropic.ToolUseBlock;
+    const { api, calls } = fake([reply([cut], "max_tokens"), reply([toolUse("simulate", goldenDominoes)])]);
+    const run = await runAgent("turn off the light", { api });
+    expect(run.outcome).toBe("success");
+    expect(run.truncations).toBe(1);
+    expect(run.attempts).toHaveLength(1);
+    const result = lastUserContent(calls[1]!) as Anthropic.ToolResultBlockParam[];
+    expect(result[0]!.tool_use_id).toBe(cut.id);
+    expect(result[0]!.is_error).toBe(true);
+  });
+
+  it("counts a context-window stop as a truncation", async () => {
+    const cut = toolUse("simulate", { note: "trunc" }) as Anthropic.ToolUseBlock;
+    const { api, calls } = fake([
+      reply([cut], "model_context_window_exceeded"),
+      reply([toolUse("simulate", goldenDominoes)]),
+    ]);
+    const run = await runAgent("turn off the light", { api });
+    expect(run.outcome).toBe("success");
+    expect(run.truncations).toBe(1);
+    expect(run.attempts).toHaveLength(1);
+    const result = lastUserContent(calls[1]!) as Anthropic.ToolResultBlockParam[];
+    expect(result[0]!.tool_use_id).toBe(cut.id);
+    expect(result[0]!.is_error).toBe(true);
+  });
+
+  it("reports zero truncations when nothing was cut off", async () => {
+    const { api } = fake([reply([toolUse("simulate", goldenDominoes)])]);
+    expect((await runAgent("turn off the light", { api })).truncations).toBe(0);
+  });
+
+  it("scales the default turn cap with attempts and previews", async () => {
+    const { api } = fake(Array.from({ length: 20 }, () => reply([toolUse("preview", goldenDominoes)])));
+    const run = await runAgent("turn off the light", { api, maxAttempts: 1, maxPreviewsPerAttempt: 1 });
+    expect(run.outcome).toBe("turn_limit");
+    expect(run.turns).toBe(1 * (1 + 1) + 12);
   });
 
   it("only ever appends to the conversation", async () => {

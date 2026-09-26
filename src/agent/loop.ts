@@ -32,6 +32,8 @@ export interface RunRecord {
   attempts: AttemptRecord[];
   previews: number;
   turns: number;
+  /** Replies cut off by max_tokens or by the context window. */
+  truncations: number;
   usage: Usage;
   wallMs: number;
   model: string;
@@ -46,7 +48,7 @@ export interface AgentOptions {
   effort?: Effort;
   maxAttempts?: number;
   maxPreviewsPerAttempt?: number;
-  /** Hard stop on model calls, whatever happens. */
+  /** Hard stop on model calls, whatever happens. Default: maxAttempts * (maxPreviewsPerAttempt + 1) + 12. */
   maxTurns?: number;
   onAttempt?: (a: AttemptRecord) => void;
 }
@@ -66,7 +68,7 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
   const effort = opts.effort ?? "high";
   const maxAttempts = opts.maxAttempts ?? 12;
   const maxPreviews = opts.maxPreviewsPerAttempt ?? 3;
-  const maxTurns = opts.maxTurns ?? 60;
+  const maxTurns = opts.maxTurns ?? maxAttempts * (maxPreviews + 1) + 12;
   const started = Date.now();
 
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: userPrompt(chore, maxAttempts, maxPreviews) }];
@@ -75,6 +77,7 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
   let previews = 0;
   let previewsThisAttempt = 0;
   let turns = 0;
+  let truncations = 0;
   let nudged = false;
   let outcome: RunOutcome = "turn_limit";
   let error: string | undefined;
@@ -90,7 +93,7 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
     try {
       res = await opts.api.messages.create({
         model,
-        max_tokens: 16000,
+        max_tokens: 64000, // Opus 5.5 thinking counts toward max_tokens; this large a cap means callers must stream.
         system: SYSTEM_PROMPT,
         tools: TOOLS,
         tool_choice: { type: "auto", disable_parallel_tool_use: true },
@@ -100,7 +103,7 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
       });
     } catch (e) {
       outcome = "api_error";
-      error = e instanceof Anthropic.APIError ? `${e.status ?? "network"}: ${e.message}` : String(e);
+      error = e instanceof Anthropic.APIError ? e.message : String(e);
       break;
     }
     usage = addUsage(usage, res.usage);
@@ -111,13 +114,18 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
     messages.push({ role: "assistant", content: res.content });
     const call = res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
 
-    if (res.stop_reason === "max_tokens") {
+    if (res.stop_reason === "max_tokens" || res.stop_reason === "model_context_window_exceeded") {
+      truncations++;
       if (call) messages.push(toolResult(call.id, "Your reply was cut off before the blueprint was complete. Send it again, shorter.", true));
       else messages.push({ role: "user", content: "Your reply was cut off. Continue with a tool call." });
       continue;
     }
 
     if (!call) {
+      if (res.content.length === 0) {
+        outcome = "gave_up";
+        break;
+      }
       if (attempts.length === 0 && !nudged) {
         nudged = true;
         messages.push({ role: "user", content: "Please design a machine and call `simulate` (or `preview` first)." });
@@ -166,7 +174,7 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
   }
 
   return {
-    chore, outcome, attempts, previews, turns, usage,
+    chore, outcome, attempts, previews, turns, truncations, usage,
     wallMs: Date.now() - started, model, effort, engine: ENGINE,
     ...(error !== undefined ? { error } : {}),
   };
