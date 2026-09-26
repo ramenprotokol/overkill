@@ -177,3 +177,9 @@ A CLI running the real Opus + `preview` + `simulate` loop on the 20-chore set. N
 - Fix `RAMEN_GITHUB_TOKEN` so `preflight.sh all` passes.
 - An Anthropic API key on a Ramen Protocol account, with a workspace spend limit set.
 - Ramen Cloudflare account token (`RAMEN_CF_*`) for the deployed-Worker part of the spike.
+
+## 13. Known limitations (from spike-build reviews, 2026-09-25)
+
+- **Chain attribution uses motion thresholds.** A part riding another (for example a bucket on a seesaw that tips *gradually*) can cross the motion threshold a few steps before the part carrying it, beyond the 2-step slack, so it is not credited to the chain. This produces false failures, never false successes. Impact launches work. **Planned fix before public launch:** a counterfactual attribution — run the same machine with and without the first push in lockstep and credit a part when its pose diverges while touching an already-diverged part; judge "hit the finale on its own" by whether the finale is also triggered without the push.
+- Preview's floating-part warning says a part "will fall as soon as the machine starts"; with the 1-second settle it actually falls while settling.
+- `SimResult.events` / `finaleHit` count any first contact with the finale (including during settling); the trace uses its own moving-contact definition. Nothing reads the sim's version yet.
