@@ -1528,9 +1528,9 @@ export const SYSTEM_PROMPT = `You design absurd chain-reaction machines that per
 - finale: the thing the chore is about (switch, bowl, bell, door or plant). 0.4 wide and 0.8 tall, standing on the bottom of its cell, bolted in place. Give it a short label naming the chore.
 
 ## How a run works
-- The machine starts when the first push rolls one ball left or right (soft, medium or hard).
+- The machine first settles for one second (loose parts drop into place), then the first push rolls one ball left or right (soft, medium or hard).
 - A run lasts 20 simulated seconds.
-- A part joins the chain when a part already in the chain touches it (a new hit, or a part it was already resting on) and it then starts moving. Parts that fall or roll on their own never join the chain.
+- A part joins the chain when a part already in the chain touches it (a new hit, or a part it was already resting on) and it then starts moving. Parts that fall, roll or settle on their own never join the chain.
 - Success means a part in the chain touches the finale and the chain from the pushed ball to that part has at least ${MIN_CHAIN_PARTS} parts. A shorter chain is "not overkill enough" and does not count.
 
 ## Rules
@@ -2360,3 +2360,4 @@ Approved by the controller after task reviews; the code and tests on `feat/spike
 2. **Task 5 — trace, round 1:** a finale hit only counts if the hitting part had already joined the chain at that step. Outside-hitter summary is now `Not overkill enough: <id> hit the finale on its own, before the chain reached it.`
 3. **Task 4/5 — sim + trace, round 2:** the sim also records contact intervals (`contacts`, start/stop, floor excluded) and per-part moving intervals (`moving`); `SimEvent` drops `aMoves`/`bMoves`. The trace grows the chain earliest-first over contact intervals: a part joins from a chain part it touches — fresh hit or resting contact — when it starts moving during the contact or within `MOVE_WINDOW` steps after; parts already moving on their own can't join. The finale is triggered by the first *moving* part that touches it, and only counts if that part was already in the chain. This fixes launched-from-rest parts (e.g. a ball on a seesaw) and same-step event ordering.
 4. **Task 6 — prompt:** the chain rule sentence reads "touches it (a new hit, or a part it was already resting on) and it then starts moving".
+5. **Task 4/5 — round 4 (settling and motion):** the sim settles the machine under gravity for `SETTLE_STEPS = 60` steps before the push (settling steps are numbered negative; the push is step 0). A part counts as moving when `|v| + |ω|·bodyRadius > MOVE_SPEED (0.2)` — one threshold for every part, measured at its fastest point (`MOVE_LINEAR`/`MOVE_ANGULAR` removed). A part may be seen moving up to `JOIN_SLACK = 2` steps before its parent; nothing joins before step 0; parent ties go to the earliest-joined parent. `seesawDrop` drops its ball from row 0; new real-physics fixture `neighbourBalls`. Task 6's prompt says the machine settles for one second before the push.
