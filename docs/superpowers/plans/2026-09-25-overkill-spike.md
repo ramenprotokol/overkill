@@ -1591,7 +1591,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `interface AttemptRecord { attempt: number; blueprint: Blueprint | null; report: AttemptReport | null; errors: string[]; note: string; traceHash: string | null }`
   - `type RunOutcome = "success" | "gave_up" | "out_of_attempts" | "turn_limit" | "refused" | "api_error"`
   - `interface RunRecord { chore; outcome: RunOutcome; attempts: AttemptRecord[]; previews: number; turns: number; usage: Usage; wallMs: number; model: string; effort: Effort; engine: string; error?: string }`
-  - `DEFAULT_MODEL = "claude-opus-5-5"`, `runAgent(chore: string, opts: AgentOptions): Promise<RunRecord>` with `AgentOptions { api: MessagesApi; model?; effort? (default "high"); maxAttempts? (12); maxPreviewsPerAttempt? (3); maxTurns? (40); onAttempt?(a: AttemptRecord): void }`.
+  - `DEFAULT_MODEL = "claude-opus-5-5"`, `runAgent(chore: string, opts: AgentOptions): Promise<RunRecord>` with `AgentOptions { api: MessagesApi; model?; effort? (default "high"); maxAttempts? (12); maxPreviewsPerAttempt? (3); maxTurns? (60); onAttempt?(a: AttemptRecord): void }`.
 - Precondition: callers `await initPhysics()` before `runAgent`.
 
 - [ ] **Step 1: Write the failing tests `tests/agent/loop.test.ts`**
@@ -1821,10 +1821,10 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
   const effort = opts.effort ?? "high";
   const maxAttempts = opts.maxAttempts ?? 12;
   const maxPreviews = opts.maxPreviewsPerAttempt ?? 3;
-  const maxTurns = opts.maxTurns ?? 40;
+  const maxTurns = opts.maxTurns ?? 60;
   const started = Date.now();
 
-  const messages: Anthropic.MessageParam[] = [{ role: "user", content: userPrompt(chore, maxAttempts) }];
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: userPrompt(chore, maxAttempts, maxPreviews) }];
   const attempts: AttemptRecord[] = [];
   let usage = emptyUsage();
   let previews = 0;
@@ -2361,3 +2361,5 @@ Approved by the controller after task reviews; the code and tests on `feat/spike
 3. **Task 4/5 — sim + trace, round 2:** the sim also records contact intervals (`contacts`, start/stop, floor excluded) and per-part moving intervals (`moving`); `SimEvent` drops `aMoves`/`bMoves`. The trace grows the chain earliest-first over contact intervals: a part joins from a chain part it touches — fresh hit or resting contact — when it starts moving during the contact or within `MOVE_WINDOW` steps after; parts already moving on their own can't join. The finale is triggered by the first *moving* part that touches it, and only counts if that part was already in the chain. This fixes launched-from-rest parts (e.g. a ball on a seesaw) and same-step event ordering.
 4. **Task 6 — prompt:** the chain rule sentence reads "touches it (a new hit, or a part it was already resting on) and it then starts moving".
 5. **Task 4/5 — round 4 (settling and motion):** the sim settles the machine under gravity for `SETTLE_STEPS = 60` steps before the push (settling steps are numbered negative; the push is step 0). A part counts as moving when `|v| + |ω|·bodyRadius > MOVE_SPEED (0.2)` — one threshold for every part, measured at its fastest point (`MOVE_LINEAR`/`MOVE_ANGULAR` removed). A part may be seen moving up to `JOIN_SLACK = 2` steps before its parent; nothing joins before step 0; parent ties go to the earliest-joined parent. `seesawDrop` drops its ball from row 0; new real-physics fixture `neighbourBalls`. Task 6's prompt says the machine settles for one second before the push.
+6. **Task 6 — prompt accuracy (after review):** the system prompt gives the finale its own section (top-level object, not a `parts` entry), states that only the first moving touch of the finale counts (an outside touch, even while settling, makes the run not overkill enough), rewords the on-its-own rule ("movement a part makes on its own — falling, rolling, settling — never adds it to the chain"), states field limits (note ≤ 140, label ≤ 60), says "neighbouring columns (1 metre apart)", and mentions the unreachable-domino warning. `userPrompt(chore, maxAttempts, maxPreviews)` states the preview allowance. `parseBlueprint` rejects the reserved ids `finale` and `floor`.
+7. **Task 7 — loop:** passes `maxPreviews` to `userPrompt`; default `maxTurns` is 60 (12 attempts × (3 previews + 1 simulate) fits).
