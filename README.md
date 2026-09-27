@@ -109,8 +109,9 @@ npm run build       # writes dist/ (static site, _headers, THIRD-PARTY-NOTICES.t
 npm run test:e2e    # builds, then checks dist/ in headless Chromium
 ```
 
-`npm run test:e2e` serves `dist/` locally with the headers from `dist/_headers` applied, so the Content Security Policy is live. It then checks five things:
+`npm run test:e2e` serves `dist/` locally with the headers from `dist/_headers` applied, so the Content Security Policy is live. It then checks six things:
 
+- `dist/` ships its third-party notices, and a CSP that allows WebAssembly and nothing inline.
 - Every stored attempt run in the browser reaches the same trace hash as Node, with no console errors or CSP violations.
 - The site autoplays, and fits a 400 px screen without sideways scrolling.
 - Reduced motion turns autoplay off.
