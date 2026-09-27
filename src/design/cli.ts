@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { SYSTEM_PROMPT, userPrompt } from "../agent/prompt.js";
@@ -16,7 +16,8 @@ const USAGE = `Offline design harness: the agent loop's preview and simulate too
   npm run design -- --chore <id> --history
   npm run design -- --chore <id> --give-up "<one sentence>"
 
-Every attempt is appended to <dir>/<id>.json (default dir: machines) and can't be undone or rewritten.`;
+Every attempt is appended to machines/<id>.json. The harness never edits or removes a recorded attempt, and runs
+one call per chore at a time, like the loop. (--dir <path> points it somewhere else, for tests.)`;
 
 function describe(m: MachineFile): string {
   const last = m.attempts.at(-1);
@@ -46,9 +47,12 @@ async function main(): Promise<number> {
     const path = fileFor(choreId(chore));
     return existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as MachineFile) : newMachine(chore);
   };
+  // Written to a temporary file and renamed into place, so a crash never leaves half a history.
   const save = (m: MachineFile) => {
     mkdirSync(dir, { recursive: true });
-    writeFileSync(fileFor(m.id), `${JSON.stringify(m, null, 2)}\n`);
+    const tmp = `${fileFor(m.id)}.tmp`;
+    writeFileSync(tmp, `${JSON.stringify(m, null, 2)}\n`);
+    renameSync(tmp, fileFor(m.id));
   };
 
   if (values.help || process.argv.length <= 2) {
@@ -65,19 +69,31 @@ async function main(): Promise<number> {
     console.error(`Unknown chore id "${values.chore ?? ""}". Run: npm run design -- --list`);
     return 1;
   }
-  let m = load(chore);
-
   if (values.prompt) {
+    const m = load(chore);
     console.log(`${SYSTEM_PROMPT}\n\n---\n\n${userPrompt(chore, m.maxAttempts, m.maxPreviewsPerAttempt)}`);
     return 0;
   }
   if (values.history) {
+    const m = load(chore);
     for (const a of m.attempts) console.log(`--- attempt ${a.attempt} (${a.previews} previews before it) ---\n${a.feedback}\n`);
     console.log(`Status: ${describe(m)}${m.gaveUp ? ` (${m.gaveUp})` : ""}`);
     return 0;
   }
 
+  // One call per chore at a time, as in the loop (it never runs tools in parallel): two simulates racing on the same
+  // file could otherwise both print a result while only one got recorded.
+  mkdirSync(dir, { recursive: true });
+  const lock = join(dir, `${choreId(chore)}.lock`);
+  let fd: number;
   try {
+    fd = openSync(lock, "wx");
+  } catch {
+    console.error(`Another design call on "${chore}" is running (${lock} exists). Wait for it; delete the lock only if no call is running.`);
+    return 1;
+  }
+  try {
+    let m = load(chore);
     if (values["give-up"] !== undefined) {
       m = giveUpStep(m, values["give-up"]);
       save(m);
@@ -114,6 +130,9 @@ async function main(): Promise<number> {
       return 1;
     }
     throw e;
+  } finally {
+    closeSync(fd);
+    rmSync(lock, { force: true });
   }
 }
 

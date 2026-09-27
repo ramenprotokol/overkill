@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -136,6 +136,17 @@ describe("design CLI", () => {
     const again = run("--chore", "turn-off-the-light", "--blueprint", bp);
     expect(again.status).toBe(1);
     expect(again.stderr).toContain("already worked on attempt 1");
+  }, 60_000);
+
+  it("runs one call per chore at a time: a call that finds the chore locked records nothing", () => {
+    writeFileSync(join(dir, "close-the-door.lock"), "");
+    const r = run("--chore", "close-the-door", "--blueprint", bp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("Another design call");
+    expect(existsSync(join(dir, "close-the-door.json"))).toBe(false);
+    rmSync(join(dir, "close-the-door.lock"));
+    expect(run("--chore", "close-the-door", "--preview", "--blueprint", bp).status).toBe(0);
+    expect(existsSync(join(dir, "close-the-door.lock"))).toBe(false); // released afterwards
   }, 60_000);
 
   it("rejects an unknown chore and a blueprint file that isn't JSON without using an attempt", () => {
