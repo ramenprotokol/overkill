@@ -121,10 +121,12 @@ describe("built site", () => {
     await page.keyboard.press("Tab");
     expect(await page.evaluate(() => document.activeElement?.className)).toBe("skip");
     await page.keyboard.press("Enter");
-    await page.waitForFunction(() => location.hash === "#sheet");
+    await page.waitForFunction(() => document.activeElement?.id === "sheet");
+    // The address still names this sheet, so a reload or a copied link opens it, not the first sheet.
+    expect(await page.evaluate(() => location.hash)).toBe(`#/${m.id}/1`);
+    expect(Math.abs(await page.evaluate(() => document.getElementById("sheet")!.getBoundingClientRect().top))).toBeLessThan(1);
     expect(await page.title()).toBe(title);
     expect(await page.isHidden("#route-message")).toBe(true);
-    expect(await page.evaluate(() => document.activeElement?.id)).toBe("sheet");
 
     const href = `#/${m.id}/2`;
     await page.focus(`a.rev[href="${href}"]`);

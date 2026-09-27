@@ -299,8 +299,15 @@ for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="spe
     if (radio.checked) player.speed = Number(radio.value);
   });
 }
+// The skip link moves to the sheet without swapping its address (#/<chore>/<rev>) for #sheet, which would open the
+// first sheet on a reload or from a copied link.
+document.querySelector<HTMLAnchorElement>("a.skip")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  sheet.scrollIntoView();
+  sheet.focus({ preventScroll: true });
+});
 window.addEventListener("hashchange", () => {
-  // In-page anchors such as the skip link aren't sheet changes.
+  // In-page anchors such as a typed #sheet aren't sheet changes.
   if (location.hash.startsWith("#/")) void show(route(location.hash));
 });
 void show(route(location.hash));

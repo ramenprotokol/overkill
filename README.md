@@ -103,7 +103,7 @@ Needs Node 22.
 
 ```bash
 npm install
-npm test            # 229 unit tests: core, trace, harness, agent loop, spike, stored machines, site config
+npm test            # 230 unit tests: core, trace, harness, agent loop, spike, stored machines, site config
 npm run typecheck   # Node code, web app and browser tests
 npm run build       # writes dist/ (static site, _headers, THIRD-PARTY-NOTICES.txt)
 npm run test:e2e    # builds, then checks dist/ in headless Chromium
@@ -114,7 +114,7 @@ npm run test:e2e    # builds, then checks dist/ in headless Chromium
 - Every stored attempt run in the browser reaches the same trace hash as Node, with no console errors or CSP violations.
 - The site autoplays, and fits a 400 px screen without sideways scrolling.
 - Reduced motion turns autoplay off.
-- The skip link keeps the current sheet, and following a revision link keeps keyboard focus on it.
+- The skip link keeps the current sheet and its address, and following a revision link keeps keyboard focus on it.
 - A bad link gets a clear message.
 
 It needs a Chromium: `npx playwright-core install chromium`, or set `CHROMIUM_PATH`.
