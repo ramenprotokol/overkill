@@ -89,3 +89,19 @@ export const lateRoller: Blueprint = {
     { id: "b2", kind: "ball", col: 15, row: 8, size: "s" },
   ],
 };
+
+/**
+ * A loose bucket still sliding on a seesaw when the pushed ball drops onto the seesaw. The ball changes the bucket's
+ * path through the seesaw; the old motion-start attribution never credited a part that was already moving. Verified in real physics.
+ */
+export const slidingBucket: Blueprint = {
+  note: "The bucket was going somewhere anyway. Now it goes somewhere else.",
+  finale: { kind: "bell", label: "ring the bell", col: 15, row: 0 },
+  firstPush: { ball: "b1", direction: "right", strength: "medium" },
+  parts: [
+    { id: "p1", kind: "plank", col: 1, row: 5, length: 3, angle: 0, fixed: true },
+    { id: "b1", kind: "ball", col: 1, row: 4, size: "m" },
+    { id: "s1", kind: "seesaw", col: 5, row: 8, length: 4 },
+    { id: "k1", kind: "bucket", col: 6, row: 7, fixed: false },
+  ],
+};

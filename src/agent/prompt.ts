@@ -22,7 +22,7 @@ export const SYSTEM_PROMPT = `You design absurd chain-reaction machines that per
 ## How a run works
 - The machine first settles for one second (loose parts drop into place), then the first push rolls one ball left or right (soft, medium or hard).
 - A run lasts 20 simulated seconds after the push.
-- A part joins the chain when a part already in the chain touches it (a new hit, or a part it was already resting on) and it then starts moving. Fixed planks and fixed buckets never move, so they never join the chain or count toward it. Movement a part makes on its own (falling, rolling, settling) never adds it to the chain.
+- A part joins the chain when a part already in the chain touches it (a new hit, or a part it was already resting on) and that touch changes where it goes. The simulator runs every machine twice in lockstep, with and without the push, and a part only counts once the push has moved it at least 5 cm from where it would otherwise be. Fixed planks and fixed buckets never move, so they never join the chain or count toward it. Movement a part would make without the push (falling, rolling, settling) never adds it to the chain.
 - Success means a part in the chain touches the finale and the chain from the pushed ball to that part has at least ${MIN_CHAIN_PARTS} parts. A shorter chain is "not overkill enough" and does not count.
 - Only the first moving thing to touch the finale counts. If a part outside the chain touches it first, even while the machine settles, the run is not overkill enough.
 - The machine must need the push: if the finale would also get hit without the first push, the run does not count.

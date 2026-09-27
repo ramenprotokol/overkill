@@ -15,10 +15,19 @@ export const GRAVITY = { x: 0, y: -9.81 };
 export const MOVE_SPEED = 0.2;
 /** The machine settles under gravity for this many steps (1 second) before the first push. */
 export const SETTLE_STEPS = 60;
-/** A part may be seen moving up to this many steps before the part that set it off (motion is sampled per body). */
+/**
+ * Chain attribution compares every run with a push-free twin run stepped in lockstep. A part has left its push-free
+ * path once some point of it is this far (metres) from where the twin has it: far above float noise (about 1e-6 m
+ * on this board), small enough that a touch registers within a step or two.
+ */
+export const DEVIATION_ONSET = 1e-4;
+/** A part only counts toward the chain if the push moved some point of it at least this far (metres) off its push-free path. */
+export const DEVIATION_VISIBLE = 0.05;
+/**
+ * Timing slack, in steps, when matching a part leaving its push-free path to a touch: contact events can be reported a
+ * step or two away from the impulse that changed the part's path, and a load can register a step before its carrier.
+ */
 export const JOIN_SLACK = 2;
-/** Steps after a hit in which the hit part must start moving to join the chain. */
-export const MOVE_WINDOW = 30;
 
 /** Speed given to the first ball, in m/s. */
 export const PUSH_SPEED = { soft: 2, medium: 4, hard: 6 } as const;

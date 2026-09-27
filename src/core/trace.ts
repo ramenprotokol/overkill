@@ -1,4 +1,4 @@
-import { JOIN_SLACK, MIN_CHAIN_PARTS, MOVE_WINDOW } from "./constants.js";
+import { JOIN_SLACK, MIN_CHAIN_PARTS } from "./constants.js";
 import type { Blueprint } from "./blueprint.js";
 import { runSim, type SimResult } from "./sim.js";
 
@@ -52,6 +52,10 @@ export interface AttemptReport {
   neverMoved: string[];
   fellOff: string[];
   summary: string;
+  /** Every part that joined the chain, with the step it joined at (the pushed ball joins at 0). */
+  joinedAt: Record<string, number>;
+  /** Step at which the part named by finaleHitBy touched the finale, or null. */
+  finaleStep: number | null;
 }
 
 export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
@@ -60,23 +64,23 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
   const parent = new Map<string, string | null>([[root, null]]);
   const joinedAt = new Map<string, number>([[root, 0]]);
 
-  // Grow the chain earliest-first until nothing else can join. A part joins from a chain part it is touching —
-  // a fresh hit or a resting contact — when it starts moving during that contact or within MOVE_WINDOW steps after.
-  // Parts already moving on their own can't join: they have no new start. The machine settles before the push
-  // (step 0), so a part may be seen moving up to JOIN_SLACK steps before the part that set it off — motion is
-  // sampled per body, and nothing is allowed to join before the push itself.
+  // Counterfactual attribution: the sim ran a push-free twin of the machine in lockstep, so a part's deviation onset
+  // is the first step at which the push changed where it is. A part joins from a chain part it was touching at that
+  // moment (a fresh hit or a resting contact), and only if the push eventually moved it visibly. Movement the part
+  // would have made anyway (falling, rolling, settling) never counts, because the twin makes it too. The chain grows
+  // earliest-onset first; JOIN_SLACK absorbs contact-event timing and a load registering a step before its carrier.
   for (;;) {
     let next: { id: string; from: string; fromJoined: number; step: number } | null = null;
     for (const c of sim.contacts) {
       for (const [x, y] of [[c.a, c.b], [c.b, c.a]] as const) {
         const xJoined = joinedAt.get(x);
-        if (xJoined === undefined || joinedAt.has(y) || !(y in sim.parts)) continue;
-        const from = Math.max(c.from, xJoined - JOIN_SLACK, 0); // nothing joins before the push
-        if (from > c.to) continue;
-        const onset = (sim.moving[y] ?? []).map(([start]) => start).find((s) => s >= from && s <= c.to + MOVE_WINDOW);
-        if (onset === undefined) continue;
-        const better = !next || onset < next.step || (onset === next.step && (y < next.id || (y === next.id && (xJoined < next.fromJoined || (xJoined === next.fromJoined && x < next.from)))));
-        if (better) next = { id: y, from: x, fromJoined: xJoined, step: onset };
+        if (xJoined === undefined || joinedAt.has(y)) continue;
+        const d = sim.deviation[y];
+        if (!d || d.onset === null || d.visible === null) continue;
+        if (d.onset < c.from - JOIN_SLACK || d.onset > c.to + JOIN_SLACK || xJoined > d.onset + JOIN_SLACK) continue;
+        const step = Math.max(d.onset, xJoined);
+        const better = !next || step < next.step || (step === next.step && (y < next.id || (y === next.id && (xJoined < next.fromJoined || (xJoined === next.fromJoined && x < next.from)))));
+        if (better) next = { id: y, from: x, fromJoined: xJoined, step };
       }
     }
     if (!next) break;
@@ -127,6 +131,8 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
   const ids = Object.keys(sim.parts).sort();
   const success = outcome === "success";
   const report: Omit<AttemptReport, "summary"> = {
+    joinedAt: Object.fromEntries(joinedAt),
+    finaleStep: trigger?.step ?? null,
     outcome,
     success,
     chain,

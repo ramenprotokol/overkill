@@ -3,12 +3,14 @@ import { addUsage, costUsd, emptyUsage } from "../../src/agent/cost.js";
 import { formatInvalid, formatPreview, formatReport } from "../../src/agent/format.js";
 import { SYSTEM_PROMPT, TOOLS, userPrompt } from "../../src/agent/prompt.js";
 import { blueprintJsonSchema } from "../../src/core/blueprint.js";
+import { DEVIATION_VISIBLE } from "../../src/core/constants.js";
 import type { AttemptReport } from "../../src/core/trace.js";
 
 const missed: AttemptReport = {
   outcome: "missed", success: false, chain: ["b1", "d1"], overkillScore: 0, finaleHitBy: null, stoppedAt: "d1",
   closest: { part: "d1", cells: 2.1 }, neverMoved: ["d2", "d3"], fellOff: ["b1"],
   summary: "Missed: the chain b1 → d1 stopped at d1. Closest to the finale: d1 at 2.1 cells.",
+  joinedAt: { b1: 0, d1: 40 }, finaleStep: null,
 };
 
 describe("formatReport", () => {
@@ -27,6 +29,7 @@ describe("formatReport", () => {
       outcome: "success", success: true, chain: ["b1", "d1", "d2", "d3", "d4", "d5"], overkillScore: 6, finaleHitBy: "d5", stoppedAt: null,
       closest: { part: "d5", cells: 0 }, neverMoved: [], fellOff: [],
       summary: "Success: 6-part chain b1 → d1 → d2 → d3 → d4 → d5 → finale.",
+      joinedAt: { b1: 0, d1: 10, d2: 20, d3: 30, d4: 40, d5: 50 }, finaleStep: 60,
     };
     expect(formatReport(4, 12, won)).toBe("Attempt 4 of 12: SUCCESS\nSuccess: 6-part chain b1 → d1 → d2 → d3 → d4 → d5 → finale.");
   });
@@ -94,8 +97,13 @@ describe("prompt", () => {
   });
 
   it("says fixed parts never join the chain and names the reserved ids", () => {
-    expect(SYSTEM_PROMPT).toContain("starts moving. Fixed planks and fixed buckets never move, so they never join the chain or count toward it.");
+    expect(SYSTEM_PROMPT).toContain("Fixed planks and fixed buckets never move, so they never join the chain or count toward it.");
     expect(SYSTEM_PROMPT).toContain('## Parts (entries in "parts", each with a unique short id such as b1, d3, p2) (ids "finale" and "floor" are reserved)');
+  });
+
+  it("describes chain credit as the counterfactual rule the trace analyzer applies", () => {
+    expect(SYSTEM_PROMPT).toContain("runs every machine twice in lockstep, with and without the push");
+    expect(SYSTEM_PROMPT).toContain(`at least ${DEVIATION_VISIBLE * 100} cm`);
   });
 
   it("wraps the chore as untrusted data and strips angle brackets", () => {

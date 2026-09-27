@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
-import { ENGINE } from "../../src/core/constants.js";
+import { ENGINE, SETTLE_STEPS, SIM_STEPS } from "../../src/core/constants.js";
 import { initPhysics, runSim } from "../../src/core/sim.js";
 import { dudMachine, goldenDominoes, seesawDrop, shortChain } from "../fixtures/golden.js";
 
@@ -78,5 +78,39 @@ describe("runSim", () => {
     const r = runSim(goldenDominoes);
     expect(r.moving.b1![0]![0]).toBeLessThan(0); // it dropped onto the floor while settling
     expect(r.parts.b1!.start.y).toBeCloseTo(0.3, 1); // and was resting there when pushed
+  });
+
+  it("measures how far the push moved each part against a push-free twin stepped in lockstep", () => {
+    const r = runSim(goldenDominoes);
+    expect(r.deviation.b1).toEqual({ onset: 0, visible: 0 });
+    const hit = r.events.find((e) => e.a === "b1" && e.b === "d1")!;
+    expect(r.deviation.d1!.onset).toBeGreaterThanOrEqual(hit.step - 2);
+    expect(r.deviation.d1!.onset).toBeLessThanOrEqual(hit.step + 2);
+    expect(r.deviation.d1!.visible).toBeGreaterThanOrEqual(r.deviation.d1!.onset!);
+  });
+
+  it("leaves parts the push never reaches exactly on their push-free path", () => {
+    const r = runSim(dudMachine);
+    for (const id of ["d1", "d2", "d3", "d4", "d5"]) expect(r.deviation[id]).toEqual({ onset: null, visible: null });
+  });
+
+  it("has no twin, and so no deviation, for a push-free run", () => {
+    expect(runSim(goldenDominoes, undefined, { push: false }).deviation).toEqual({});
+  });
+
+  it("records every dynamic part's pose after every step without changing the run", () => {
+    const plain = runSim(goldenDominoes);
+    const rec = runSim(goldenDominoes, undefined, { record: true });
+    expect(rec.hash).toBe(plain.hash);
+    expect(plain.frames).toBeUndefined();
+    const f = rec.frames!;
+    expect(f.ids).toEqual(["b1", "d1", "d2", "d3", "d4", "d5"]);
+    expect(f.first).toBe(-SETTLE_STEPS);
+    expect(f.count).toBe(SETTLE_STEPS + SIM_STEPS + 1);
+    expect(f.data.length).toBe(f.count * f.ids.length * 3);
+    expect([f.data[0], f.data[1], f.data[2]]).toEqual([0.5, 0.5, 0]); // b1 as laid out, in cell (0, 9)
+    const last = (f.count - 1) * f.ids.length * 3;
+    expect(f.data[last]).toBeCloseTo(plain.parts.b1!.end.x, 4);
+    expect(f.data[last + 1]).toBeCloseTo(plain.parts.b1!.end.y, 4);
   });
 });

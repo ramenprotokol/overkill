@@ -1,16 +1,26 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { initPhysics, runSim, type Contact, type PartTrack, type SimResult } from "../../src/core/sim.js";
+import { initPhysics, runSim, type Contact, type Deviation, type PartTrack, type SimResult } from "../../src/core/sim.js";
 import { analyze, finaleTriggeredWithoutPush } from "../../src/core/trace.js";
-import { droppedOnFinale, dudMachine, goldenDominoes, lateRoller, lazyRoll, neighbourBalls, shortChain } from "../fixtures/golden.js";
+import { droppedOnFinale, dudMachine, goldenDominoes, lateRoller, lazyRoll, neighbourBalls, shortChain, slidingBucket } from "../fixtures/golden.js";
 
 type Spans = [number, number][];
 const touch = (a: string, b: string, from: number, to = from + 5): Contact => (a < b ? { a, b, from, to } : { a: b, b: a, from, to });
 const track = (moved: boolean, minDistToFinale = 5, endY = 0.5): PartTrack => ({
   start: { x: 0, y: 0 }, end: { x: 0, y: endY }, moved, minDistToFinale,
 });
-const sim = (contacts: Contact[], moving: Record<string, Spans>, parts: Record<string, PartTrack> = {}): SimResult => ({
+/** By default a part leaves its push-free path (and visibly so) the moment it starts moving after the push. */
+const devFrom = (moving: Record<string, Spans>): Record<string, Deviation> =>
+  Object.fromEntries(Object.entries(moving).map(([id, spans]) => {
+    const onset = spans.map(([start]) => start).find((start) => start >= 0) ?? null;
+    return [id, { onset, visible: onset }];
+  }));
+const dev = (onset: number | null, visible: number | null = onset): Deviation => ({ onset, visible });
+const sim = (
+  contacts: Contact[], moving: Record<string, Spans>, parts: Record<string, PartTrack> = {}, deviation: Record<string, Deviation> = {},
+): SimResult => ({
   events: [], contacts, moving,
   parts: { ...Object.fromEntries(Object.entries(moving).map(([id, spans]) => [id, track(spans.length > 0)])), ...parts },
+  deviation: { ...devFrom(moving), ...deviation },
   finaleHit: null, steps: 1200, hash: "test", engine: "test",
 });
 const idle: Record<string, Spans> = { b1: [], d1: [], d2: [], d3: [], d4: [], d5: [] };
@@ -26,6 +36,8 @@ describe("analyze (hand-built traces)", () => {
     expect(r.chain).toEqual(["b1", "d1", "d2", "d3", "d4", "d5"]);
     expect(r.overkillScore).toBe(6);
     expect(r.summary).toBe("Success: 6-part chain b1 → d1 → d2 → d3 → d4 → d5 → finale.");
+    expect(r.joinedAt).toEqual({ b1: 0, d1: 10, d2: 20, d3: 30, d4: 40, d5: 50 });
+    expect(r.finaleStep).toBe(60);
   });
 
   it("calls a short chain that reaches the finale not overkill enough", () => {
@@ -46,6 +58,8 @@ describe("analyze (hand-built traces)", () => {
     const r = analyze(goldenDominoes, sim(
       [touch("d4", "finale", 1), touch("b1", "d1", 10), touch("d1", "d2", 20), touch("d2", "d3", 30), touch("d3", "d4", 40)],
       { ...idle, b1: [[0, 100]], d1: [[10, 100]], d2: [[20, 100]], d3: [[30, 100]], d4: [[1, 5], [40, 100]] },
+      {},
+      { d4: dev(40) }, // its early wobble happens without the push too
     ));
     expect(r.outcome).toBe("not_overkill");
     expect(r.success).toBe(false);
@@ -72,21 +86,49 @@ describe("analyze (hand-built traces)", () => {
   });
 
   it("lets a part already resting on a chain part join when it gets launched", () => {
-    // b2 settles on the seesaw at step 3; the pushed ball lands on the seesaw at 100 and b2 is flung at 101.
+    // b2 settles on the seesaw at step 3 (in the push-free twin too); the pushed ball lands on the seesaw at 100 and b2 is flung at 101.
     const r = analyze(goldenDominoes, sim(
       [touch("b2", "s1", 3, 200), touch("b1", "s1", 100)],
       { b1: [[0, 110]], s1: [[100, 150]], b2: [[0, 3], [101, 180]] },
+      {},
+      { b2: dev(101) },
     ));
     expect(r.chain).toEqual(["b1", "s1", "b2"]);
     expect(r.stoppedAt).toBe("b2");
   });
 
-  it("does not let a part that was already moving on its own join the chain", () => {
-    const r = analyze(goldenDominoes, sim([touch("b1", "d1", 10), touch("b2", "d1", 50)], { b1: [[0, 100]], d1: [[10, 80]], b2: [[0, 300]] }));
+  it("does not credit a part moving on its own when the push never changes its path", () => {
+    const r = analyze(goldenDominoes, sim(
+      [touch("b1", "d1", 10), touch("b2", "d1", 50)],
+      { b1: [[0, 100]], d1: [[10, 80]], b2: [[0, 300]] },
+      {},
+      { b2: dev(null) }, // it rolls exactly the same way in the push-free twin
+    ));
     expect(r.chain).toEqual(["b1", "d1"]);
   });
 
-  it("only extends the chain when the touched part actually starts moving", () => {
+  it("credits a part already moving on its own when a chain part changes its path", () => {
+    const r = analyze(goldenDominoes, sim(
+      [touch("b1", "b2", 50)],
+      { b1: [[0, 100]], b2: [[-59, 300]] },
+      {},
+      { b2: dev(50, 53) },
+    ));
+    expect(r.chain).toEqual(["b1", "b2"]);
+  });
+
+  it("does not credit a part the push only nudged, never 5 cm off its push-free path", () => {
+    const r = analyze(goldenDominoes, sim([touch("b1", "d1", 10)], { ...idle, b1: [[0, 50]], d1: [[10, 14]] }, {}, { d1: dev(10, null) }));
+    expect(r.chain).toEqual(["b1"]);
+  });
+
+  it("does not credit a part whose path changed away from any touch with the chain", () => {
+    // Without the push, b2 would have been knocked over at step 125; with it, the chain reaches it at 138. The push only delayed it.
+    const r = analyze(goldenDominoes, sim([touch("b1", "b2", 138)], { b1: [[0, 200]], b2: [[138, 150]] }, {}, { b2: dev(125, 136) }));
+    expect(r.chain).toEqual(["b1"]);
+  });
+
+  it("only extends the chain when the touch moves the part off its push-free path", () => {
     const r = analyze(goldenDominoes, sim([touch("b1", "d1", 10)], { ...idle, b1: [[0, 50]] }));
     expect(r.outcome).toBe("missed");
     expect(r.chain).toEqual(["b1"]);
@@ -132,11 +174,12 @@ describe("analyze (hand-built traces)", () => {
     expect(r.chain).toEqual(["b2"]);
   });
 
-  it("lets a part start moving within MOVE_WINDOW steps after the contact ends, but not later", () => {
-    const joins = analyze(goldenDominoes, sim([touch("b1", "d1", 10, 12)], { ...idle, b1: [[0, 50]], d1: [[42, 60]] }));
-    expect(joins.chain).toEqual(["b1", "d1"]);
-    const late = analyze(goldenDominoes, sim([touch("b1", "d1", 10, 12)], { ...idle, b1: [[0, 50]], d1: [[43, 60]] }));
-    expect(late.chain).toEqual(["b1"]);
+  it("lets a part leave its push-free path up to JOIN_SLACK steps either side of a touch, but not further", () => {
+    const moving = { ...idle, b1: [[0, 50]], d1: [[14, 60]] } as Record<string, Spans>;
+    expect(analyze(goldenDominoes, sim([touch("b1", "d1", 10, 12)], moving, {}, { d1: dev(14) })).chain).toEqual(["b1", "d1"]);
+    expect(analyze(goldenDominoes, sim([touch("b1", "d1", 10, 12)], moving, {}, { d1: dev(15) })).chain).toEqual(["b1"]);
+    expect(analyze(goldenDominoes, sim([touch("b1", "d1", 10, 12)], moving, {}, { d1: dev(8) })).chain).toEqual(["b1", "d1"]);
+    expect(analyze(goldenDominoes, sim([touch("b1", "d1", 10, 12)], moving, {}, { d1: dev(7) })).chain).toEqual(["b1"]);
   });
 
   it("never lets a fixed part join the chain", () => {
@@ -144,12 +187,16 @@ describe("analyze (hand-built traces)", () => {
     expect(r.chain).toEqual(["b1"]);
   });
 
-  it("allows a load to be seen moving a step before the seesaw that launches it", () => {
+  it("credits a load that leaves its push-free path a step before the seesaw carrying it", () => {
+    // A bucket at the end of a tipping seesaw moves further than the seesaw's own points, so it can register first.
     const r = analyze(goldenDominoes, sim(
       [touch("k1", "s1", -10, 500), touch("b1", "s1", 100)],
       { b1: [[0, 110]], s1: [[101, 150]], k1: [[-50, -40], [100, 160]] },
+      {},
+      { s1: dev(101), k1: dev(100) },
     ));
     expect(r.chain).toEqual(["b1", "s1", "k1"]);
+    expect(r.joinedAt).toEqual({ b1: 0, s1: 101, k1: 101 });
   });
 
   it("credits the earliest-joined parent when two chain parts set a part off at once", () => {
@@ -195,6 +242,21 @@ describe("analyze (real physics)", () => {
     const r = analyze(neighbourBalls, runSim(neighbourBalls));
     expect(r.outcome).toBe("success");
     expect(r.chain).toEqual(["b1", "b2", "d1", "d2", "d3", "d4", "d5"]);
+  });
+
+  it("credits a bucket whose slide a seesaw changed, which the old motion-start rule could not", () => {
+    const sim = runSim(slidingBucket);
+    // The bucket is still sliding on its own when the ball lands on the seesaw under it.
+    expect(sim.moving.k1!.some(([start, end]) => start <= sim.deviation.k1!.onset! && end > sim.deviation.k1!.onset!)).toBe(true);
+    const r = analyze(slidingBucket, sim);
+    expect(r.chain).toEqual(["b1", "s1", "k1"]);
+    expect(r.joinedAt.k1).toBeGreaterThanOrEqual(r.joinedAt.s1!);
+  });
+
+  it("gives no chain credit for motion the push-free twin makes too", () => {
+    const r = analyze(lateRoller, runSim(lateRoller));
+    expect(runSim(lateRoller).deviation.b2).toEqual({ onset: null, visible: null }); // the spare ball rolls the same either way
+    expect(Object.keys(r.joinedAt)).not.toContain("b2");
   });
 });
 
