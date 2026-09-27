@@ -1,28 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { parseBlueprint, type Blueprint } from "../core/blueprint.js";
 import { ENGINE } from "../core/constants.js";
-import { blueprintBodies } from "../core/geometry.js";
-import { findOverlaps, preview } from "../core/preview.js";
-import { runSim } from "../core/sim.js";
-import { analyze, finaleTriggeredWithoutPush, type AttemptReport } from "../core/trace.js";
+import { preview } from "../core/preview.js";
 import { addUsage, emptyUsage, type Usage } from "./cost.js";
-import { formatInvalid, formatPreview, formatReport } from "./format.js";
+import { formatPreview } from "./format.js";
+import { judgeAttempt, type AttemptRecord } from "./judge.js";
 import { SYSTEM_PROMPT, TOOLS, userPrompt } from "./prompt.js";
+
+export type { AttemptRecord } from "./judge.js";
 
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 
 /** The one SDK call the loop needs — injectable so tests can script the model. */
 export interface MessagesApi {
   messages: { create(body: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> };
-}
-
-export interface AttemptRecord {
-  attempt: number;
-  blueprint: Blueprint | null;
-  report: AttemptReport | null;
-  errors: string[];
-  note: string;
-  traceHash: string | null;
 }
 
 /** `context_full`: the conversation filled the model's context window, so no further call could succeed. */
@@ -160,36 +150,13 @@ export async function runAgent(chore: string, opts: AgentOptions): Promise<RunRe
     }
 
     previewsThisAttempt = 0;
-    const n = attempts.length + 1;
-    const parsed = parseBlueprint(call.input);
-    // Parts that start overlapping get flung apart by the engine, so an overlapping blueprint is invalid, not simulated.
-    const overlaps = parsed.ok ? findOverlaps(blueprintBodies(parsed.blueprint)) : [];
-    if (!parsed.ok) {
-      record({ attempt: n, blueprint: null, report: null, errors: parsed.errors, note: "", traceHash: null });
-      messages.push(toolResult(call.id, formatInvalid(n, maxAttempts, parsed.errors), true));
-    } else if (overlaps.length > 0) {
-      record({ attempt: n, blueprint: parsed.blueprint, report: null, errors: overlaps, note: parsed.blueprint.note, traceHash: null });
-      messages.push(toolResult(call.id, formatInvalid(n, maxAttempts, overlaps), true));
-    } else {
-      const sim = runSim(parsed.blueprint);
-      let report = analyze(parsed.blueprint, sim);
-      // A machine that hits the finale even when nobody pushes it does the chore on its own, not through the chain.
-      if (report.success && finaleTriggeredWithoutPush(parsed.blueprint)) {
-        report = {
-          ...report,
-          outcome: "not_overkill",
-          success: false,
-          overkillScore: 0,
-          summary: "Not overkill enough: the finale gets hit even without the first push.",
-        };
-      }
-      record({ attempt: n, blueprint: parsed.blueprint, report, errors: [], note: parsed.blueprint.note, traceHash: sim.hash });
-      if (report.success) {
-        outcome = "success";
-        break;
-      }
-      messages.push(toolResult(call.id, formatReport(n, maxAttempts, report)));
+    const judged = judgeAttempt(call.input, attempts.length + 1, maxAttempts);
+    record(judged.record);
+    if (judged.success) {
+      outcome = "success";
+      break;
     }
+    messages.push(toolResult(call.id, judged.feedback, judged.isError));
     if (attempts.length >= maxAttempts) {
       outcome = "out_of_attempts";
       break;
