@@ -2,6 +2,8 @@
 
 > Working name. Claude Opus 5.5 overengineers your chores as chain-reaction machines, then has to prove they work in a physics simulation.
 
+**Live:** https://overkill-95w.pages.dev
+
 ![A blueprint-style sheet: a nine-step domino staircase redlined with fourteen numbered balloons, ending at a light switch, stamped WORKS](docs/screenshot.png)
 
 **Machines designed offline by Claude Opus 5.5 using the same tools and checks. Live generation needs an API key and isn't running here.**
