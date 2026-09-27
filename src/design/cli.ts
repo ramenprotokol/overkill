@@ -17,7 +17,7 @@ const USAGE = `Offline design harness: the agent loop's preview and simulate too
   npm run design -- --chore <id> --give-up "<one sentence>"
 
 Every attempt is appended to machines/<id>.json. The harness never edits or removes a recorded attempt, and runs
-one call per chore at a time, like the loop. (--dir <path> points it somewhere else, for tests.)`;
+one call per chore at a time, like the loop.`;
 
 function describe(m: MachineFile): string {
   const last = m.attempts.at(-1);
@@ -28,20 +28,26 @@ function describe(m: MachineFile): string {
 }
 
 async function main(): Promise<number> {
-  const { values } = parseArgs({
-    options: {
-      chore: { type: "string" },
-      blueprint: { type: "string" },
-      preview: { type: "boolean", default: false },
-      prompt: { type: "boolean", default: false },
-      list: { type: "boolean", default: false },
-      history: { type: "boolean", default: false },
-      "give-up": { type: "string" },
-      dir: { type: "string", default: "machines" },
-      help: { type: "boolean", default: false },
-    },
-  });
-  const dir = values.dir;
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        chore: { type: "string" },
+        blueprint: { type: "string" },
+        preview: { type: "boolean", default: false },
+        prompt: { type: "boolean", default: false },
+        list: { type: "boolean", default: false },
+        history: { type: "boolean", default: false },
+        "give-up": { type: "string" },
+        help: { type: "boolean", default: false },
+      },
+    }));
+  } catch (e) {
+    console.error(`${e instanceof Error ? e.message : String(e)}\n\n${USAGE}`);
+    return 1;
+  }
+  // Designers always write to machines/. Only the harness's own tests point it at a temporary directory.
+  const dir = process.env.OVERKILL_MACHINES_DIR ?? "machines";
   const fileFor = (id: string) => join(dir, `${id}.json`);
   const load = (chore: string): MachineFile => {
     const path = fileFor(choreId(chore));

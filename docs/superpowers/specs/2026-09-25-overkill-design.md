@@ -187,9 +187,9 @@ A part joins the chain from a chain part it was touching at its onset, with 2 st
 - it has itself moved at least 5 cm in the pushed run since its onset;
 - its onset doesn't line up with a contact only the twin had.
 
-The last two checks came from review. Without them, a part the push merely kept from being hit opened a gap against its twin while standing still, and got credited. That happened in 17 of 685 joins on random machines.
+The last two checks came from review. Without them, a part the push merely kept from being hit opened a gap against its twin while standing still, and got credited. `tests/fixtures/golden.ts` keeps the reviewer's example as a regression test.
 
-On random machines the rule changes dropped credit for dominoes that wobbled without moving 5 cm, and for twin-only gaps. They added credit for already-moving parts whose paths the chain changed. No outcome changed, but random machines almost never succeed, so that says little. None of the stored machines' results changed.
+In one-off scratch checks on random machines (not kept in the repo, so no figures are quoted), the rule changes dropped credit for dominoes that wobbled without moving 5 cm, and for twin-only gaps. They added credit for already-moving parts whose paths the chain changed. Random machines almost never reach their finale, so those checks say little about outcomes. What is scripted: `tests/machines/machines.test.ts` re-judges every stored attempt, and none of their results changed.
 
 This is a one-off check with scratch scripts, not kept in the repo.
 - **What the counterfactual rule still can't do.** A part that the push only *delays* (the twin would have been hit a few steps earlier by the same chain part) is not credited, because its path changed before the push-world touch. A part nudged past 0.1 mm by a non-chain part first, and hit properly by the chain later, is not credited either. Those two drop a part from the chain, which usually shortens it (though the next part can then join through a longer route). A third, rarer error can go either way: when two chain parts touch the same part, it joins from whichever affected it first, even if the other one did the real work later, so the reported path can be longer or shorter than the "true" one. It still has to be a chain of touching parts, each moved at least 5 cm by the push.

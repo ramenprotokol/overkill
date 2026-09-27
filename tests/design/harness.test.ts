@@ -119,7 +119,7 @@ describe("design CLI", () => {
   const bp = join(dir, "bp.json");
   writeFileSync(bp, JSON.stringify(goldenDominoes));
   const run = (...args: string[]) =>
-    spawnSync("npx", ["tsx", "src/design/cli.ts", "--dir", dir, ...args], { env: { PATH: process.env.PATH }, encoding: "utf8" });
+    spawnSync("npx", ["tsx", "src/design/cli.ts", ...args], { env: { PATH: process.env.PATH, OVERKILL_MACHINES_DIR: dir }, encoding: "utf8" });
 
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -147,6 +147,12 @@ describe("design CLI", () => {
     rmSync(join(dir, "close-the-door.lock"));
     expect(run("--chore", "close-the-door", "--preview", "--blueprint", bp).status).toBe(0);
     expect(existsSync(join(dir, "close-the-door.lock"))).toBe(false); // released afterwards
+  }, 60_000);
+
+  it("has no option for writing a history anywhere but machines/", () => {
+    const r = spawnSync("npx", ["tsx", "src/design/cli.ts", "--dir", dir, "--list"], { env: { PATH: process.env.PATH }, encoding: "utf8" });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("--dir");
   }, 60_000);
 
   it("rejects an unknown chore and a blueprint file that isn't JSON without using an attempt", () => {
