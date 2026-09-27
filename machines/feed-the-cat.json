@@ -1,0 +1,165 @@
+{
+  "chore": "feed the cat",
+  "id": "feed-the-cat",
+  "designer": "Claude Opus 5.5 (claude-opus-5-5), offline, through npm run design",
+  "engine": "@dimforge/rapier2d-deterministic-compat@0.21.0",
+  "maxAttempts": 12,
+  "maxPreviewsPerAttempt": 3,
+  "status": "success",
+  "pendingPreviews": 0,
+  "attempts": [
+    {
+      "attempt": 1,
+      "previews": 1,
+      "input": {
+        "note": "Dinner descends a staircase, gets kicked off a doorstep and rolled to the bowl by a second, more motivated ball.",
+        "finale": {
+          "kind": "bowl",
+          "label": "feed the cat",
+          "col": 1,
+          "row": 9
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "left",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 13,
+            "row": 5,
+            "length": 3,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 14,
+            "row": 4,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 13,
+            "row": 4
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 12,
+            "row": 4
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 11,
+            "row": 6,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 11,
+            "row": 5
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 10,
+            "row": 7,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 10,
+            "row": 6
+          },
+          {
+            "id": "p4",
+            "kind": "plank",
+            "col": 9,
+            "row": 8,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 9,
+            "row": 7
+          },
+          {
+            "id": "p5",
+            "kind": "plank",
+            "col": 8,
+            "row": 9,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d6",
+            "kind": "domino",
+            "col": 8,
+            "row": 8
+          },
+          {
+            "id": "d7",
+            "kind": "domino",
+            "col": 7,
+            "row": 9
+          },
+          {
+            "id": "p6",
+            "kind": "plank",
+            "col": 6,
+            "row": 9,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 6,
+            "row": 8,
+            "size": "m"
+          },
+          {
+            "id": "b3",
+            "kind": "ball",
+            "col": 4,
+            "row": 9,
+            "size": "m"
+          }
+        ]
+      },
+      "outcome": "success",
+      "feedback": "Attempt 1 of 12: SUCCESS\nSuccess: 10-part chain b1 → d1 → d2 → d3 → d4 → d5 → d6 → d7 → b2 → b3 → finale.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "d3",
+        "d4",
+        "d5",
+        "d6",
+        "d7",
+        "b2",
+        "b3"
+      ],
+      "overkillScore": 10,
+      "hash": "581f06dcb1ca0278"
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "chore": "let the dog out",
+  "id": "let-the-dog-out",
+  "designer": "Claude Opus 5.5 (claude-opus-5-5), offline, through npm run design",
+  "engine": "@dimforge/rapier2d-deterministic-compat@0.21.0",
+  "maxAttempts": 12,
+  "maxPreviewsPerAttempt": 3,
+  "status": "success",
+  "pendingPreviews": 0,
+  "attempts": [
+    {
+      "attempt": 1,
+      "previews": 1,
+      "input": {
+        "note": "Dominoes flick a ball down a steep ramp into the dog's crate, which drops onto a seesaw that lifts the door latch. The dog just waits.",
+        "finale": {
+          "kind": "door",
+          "label": "let the dog out",
+          "col": 14,
+          "row": 8
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "right",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 3,
+            "row": 2,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 6,
+            "row": 2,
+            "length": 2,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 1,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 2,
+            "row": 1
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 4,
+            "row": 1
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 6,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 8,
+            "row": 4,
+            "length": 3,
+            "angle": -30,
+            "fixed": true
+          },
+          {
+            "id": "p4",
+            "kind": "plank",
+            "col": 10,
+            "row": 5,
+            "length": 1,
+            "angle": -15,
+            "fixed": true
+          },
+          {
+            "id": "k1",
+            "kind": "bucket",
+            "col": 10,
+            "row": 4,
+            "fixed": false
+          },
+          {
+            "id": "s1",
+            "kind": "seesaw",
+            "col": 12,
+            "row": 9,
+            "length": 4
+          }
+        ]
+      },
+      "outcome": "success",
+      "feedback": "Attempt 1 of 12: SUCCESS\nSuccess: 5-part chain b1 → d1 → d2 → d3 → b2 → finale.\nFell off the board: b2.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "d3",
+        "b2"
+      ],
+      "overkillScore": 5,
+      "hash": "08f6c399587fe32f"
+    }
+  ]
+}

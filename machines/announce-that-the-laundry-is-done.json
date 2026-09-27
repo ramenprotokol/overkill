@@ -1,0 +1,388 @@
+{
+  "chore": "announce that the laundry is done",
+  "id": "announce-that-the-laundry-is-done",
+  "designer": "Claude Opus 5.5 (claude-opus-5-5), offline, through npm run design",
+  "engine": "@dimforge/rapier2d-deterministic-compat@0.21.0",
+  "maxAttempts": 12,
+  "maxPreviewsPerAttempt": 3,
+  "status": "success",
+  "pendingPreviews": 0,
+  "attempts": [
+    {
+      "attempt": 1,
+      "previews": 2,
+      "input": {
+        "note": "Two shelves of dominoes shove the laundry basket onto a seesaw, and the seesaw's far end rises into the bell. Nobody folds anything.",
+        "finale": {
+          "kind": "bell",
+          "label": "announce that the laundry is done",
+          "col": 4,
+          "row": 8
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "left",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p0",
+            "kind": "plank",
+            "col": 12,
+            "row": 2,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 14,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 13,
+            "row": 1
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 12,
+            "row": 1
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 10,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 8,
+            "row": 4,
+            "length": 3,
+            "angle": 15,
+            "fixed": true
+          },
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 4,
+            "row": 5,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 5,
+            "row": 4
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 4,
+            "row": 4
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 3,
+            "row": 4
+          },
+          {
+            "id": "k1",
+            "kind": "bucket",
+            "col": 2,
+            "row": 4,
+            "fixed": false
+          },
+          {
+            "id": "s1",
+            "kind": "seesaw",
+            "col": 2,
+            "row": 9,
+            "length": 4
+          }
+        ]
+      },
+      "outcome": "missed",
+      "feedback": "Attempt 1 of 12: MISSED\nMissed: the chain b1 → d1 → d2 → b2 → d3 → d4 → d5 → k1 stopped at k1. Closest to the finale: b2 at 3.6 cells.\nNever moved: s1.\nAttempts left: 11.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "b2",
+        "d3",
+        "d4",
+        "d5",
+        "k1"
+      ],
+      "overkillScore": 0,
+      "hash": "787496bbac96849c"
+    },
+    {
+      "attempt": 2,
+      "previews": 1,
+      "input": {
+        "note": "The basket slid a few centimetres and parked. Tilted its bit of shelf 15 degrees toward the drop so the shove gets gravity's help.",
+        "finale": {
+          "kind": "bell",
+          "label": "announce that the laundry is done",
+          "col": 4,
+          "row": 8
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "left",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p0",
+            "kind": "plank",
+            "col": 12,
+            "row": 2,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 14,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 13,
+            "row": 1
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 12,
+            "row": 1
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 10,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 8,
+            "row": 4,
+            "length": 3,
+            "angle": 15,
+            "fixed": true
+          },
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 5,
+            "row": 5,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 2,
+            "row": 5,
+            "length": 1,
+            "angle": 15,
+            "fixed": true
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 5,
+            "row": 4
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 4,
+            "row": 4
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 3,
+            "row": 4
+          },
+          {
+            "id": "k1",
+            "kind": "bucket",
+            "col": 2,
+            "row": 4,
+            "fixed": false
+          },
+          {
+            "id": "s1",
+            "kind": "seesaw",
+            "col": 2,
+            "row": 9,
+            "length": 4
+          }
+        ]
+      },
+      "outcome": "missed",
+      "feedback": "Attempt 2 of 12: MISSED\nMissed: the chain b1 → d1 → d2 → b2 → d3 → d4 → d5 → k1 stopped at k1. Closest to the finale: d3 at 3.5 cells.\nNever moved: s1.\nAttempts left: 10.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "b2",
+        "d3",
+        "d4",
+        "d5",
+        "k1"
+      ],
+      "overkillScore": 0,
+      "hash": "048210e850851208"
+    },
+    {
+      "attempt": 3,
+      "previews": 1,
+      "input": {
+        "note": "The basket refused to leave the shelf twice. Sent a sock instead: domino 5's tip flicks a ball off the edge onto the seesaw.",
+        "finale": {
+          "kind": "bell",
+          "label": "announce that the laundry is done",
+          "col": 3,
+          "row": 8
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "left",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p0",
+            "kind": "plank",
+            "col": 12,
+            "row": 2,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 14,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 13,
+            "row": 1
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 12,
+            "row": 1
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 10,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 8,
+            "row": 4,
+            "length": 3,
+            "angle": 15,
+            "fixed": true
+          },
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 3,
+            "row": 5,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 6,
+            "row": 5,
+            "length": 2,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 5,
+            "row": 4
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 4,
+            "row": 4
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 3,
+            "row": 4
+          },
+          {
+            "id": "b3",
+            "kind": "ball",
+            "col": 1,
+            "row": 4,
+            "size": "m"
+          },
+          {
+            "id": "s1",
+            "kind": "seesaw",
+            "col": 1,
+            "row": 9,
+            "length": 4
+          }
+        ]
+      },
+      "outcome": "success",
+      "feedback": "Attempt 3 of 12: SUCCESS\nSuccess: 9-part chain b1 → d1 → d2 → b2 → d3 → d4 → d5 → b3 → s1 → finale.\nFell off the board: b3.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "b2",
+        "d3",
+        "d4",
+        "d5",
+        "b3",
+        "s1"
+      ],
+      "overkillScore": 9,
+      "hash": "e1fc60a5c206d6e7"
+    }
+  ]
+}

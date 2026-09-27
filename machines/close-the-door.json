@@ -1,0 +1,265 @@
+{
+  "chore": "close the door",
+  "id": "close-the-door",
+  "designer": "Claude Opus 5.5 (claude-opus-5-5), offline, through npm run design",
+  "engine": "@dimforge/rapier2d-deterministic-compat@0.21.0",
+  "maxAttempts": 12,
+  "maxPreviewsPerAttempt": 3,
+  "status": "success",
+  "pendingPreviews": 0,
+  "attempts": [
+    {
+      "attempt": 1,
+      "previews": 1,
+      "input": {
+        "note": "Ten parts, two floors and one ramp to swing a door shut. The door was right there.",
+        "finale": {
+          "kind": "door",
+          "label": "close the door",
+          "col": 3,
+          "row": 9
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "right",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 1,
+            "row": 2,
+            "length": 3,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 0,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 6,
+            "row": 5,
+            "length": 4,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 10,
+            "row": 5,
+            "length": 4,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 7,
+            "row": 4
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 8,
+            "row": 4
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 9,
+            "row": 4
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 10,
+            "row": 4
+          },
+          {
+            "id": "c1",
+            "kind": "ball",
+            "col": 11,
+            "row": 4,
+            "size": "m"
+          },
+          {
+            "id": "p4",
+            "kind": "plank",
+            "col": 12,
+            "row": 7,
+            "length": 4,
+            "angle": 30,
+            "fixed": true
+          },
+          {
+            "id": "c2",
+            "kind": "ball",
+            "col": 8,
+            "row": 9,
+            "size": "l"
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 6,
+            "row": 9
+          },
+          {
+            "id": "d6",
+            "kind": "domino",
+            "col": 5,
+            "row": 9
+          },
+          {
+            "id": "d7",
+            "kind": "domino",
+            "col": 4,
+            "row": 9
+          }
+        ]
+      },
+      "outcome": "missed",
+      "feedback": "Attempt 1 of 12: MISSED\nMissed: the chain b1 → d1 → d2 → d3 → d4 → c1 stopped at c1. Closest to the finale: b1 at 4.8 cells.\nNever moved: c2, d5, d6, d7.\nAttempts left: 11.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "d3",
+        "d4",
+        "c1"
+      ],
+      "overkillScore": 0,
+      "hash": "0c78cbf7cc7b35d1"
+    },
+    {
+      "attempt": 2,
+      "previews": 1,
+      "input": {
+        "note": "A falling domino only pinned c1 to the shelf. Balls hand over to balls now; the dominoes wait on the floor.",
+        "finale": {
+          "kind": "door",
+          "label": "close the door",
+          "col": 1,
+          "row": 9
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "right",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 1,
+            "row": 2,
+            "length": 3,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 0,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 6,
+            "row": 5,
+            "length": 4,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 10,
+            "row": 5,
+            "length": 4,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "c1",
+            "kind": "ball",
+            "col": 9,
+            "row": 4,
+            "size": "l"
+          },
+          {
+            "id": "p4",
+            "kind": "plank",
+            "col": 12,
+            "row": 7,
+            "length": 4,
+            "angle": 30,
+            "fixed": true
+          },
+          {
+            "id": "c2",
+            "kind": "ball",
+            "col": 8,
+            "row": 9,
+            "size": "l"
+          },
+          {
+            "id": "c3",
+            "kind": "ball",
+            "col": 7,
+            "row": 9,
+            "size": "l"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 5,
+            "row": 9
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 4,
+            "row": 9
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 3,
+            "row": 9
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 2,
+            "row": 9
+          }
+        ]
+      },
+      "outcome": "success",
+      "feedback": "Attempt 2 of 12: SUCCESS\nSuccess: 8-part chain b1 → c1 → c2 → c3 → d1 → d2 → d3 → d4 → finale.",
+      "chain": [
+        "b1",
+        "c1",
+        "c2",
+        "c3",
+        "d1",
+        "d2",
+        "d3",
+        "d4"
+      ],
+      "overkillScore": 8,
+      "hash": "d949d3e9e8a8c424"
+    }
+  ]
+}

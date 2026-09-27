@@ -1,0 +1,134 @@
+{
+  "chore": "start the coffee machine",
+  "id": "start-the-coffee-machine",
+  "designer": "Claude Opus 5.5 (claude-opus-5-5), offline, through npm run design",
+  "engine": "@dimforge/rapier2d-deterministic-compat@0.21.0",
+  "maxAttempts": 12,
+  "maxPreviewsPerAttempt": 3,
+  "status": "success",
+  "pendingPreviews": 0,
+  "attempts": [
+    {
+      "attempt": 1,
+      "previews": 1,
+      "input": {
+        "note": "Three storeys, one bucket used as a shunting cart, four dominoes. The switch is 3 metres from the ball. That was never the point.",
+        "finale": {
+          "kind": "switch",
+          "label": "start the coffee machine",
+          "col": 13,
+          "row": 9
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "left",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 14,
+            "row": 1,
+            "length": 3,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 15,
+            "row": 0,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 10,
+            "row": 3,
+            "length": 5,
+            "angle": 15,
+            "fixed": true
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 5,
+            "row": 5,
+            "length": 6,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "k1",
+            "kind": "bucket",
+            "col": 4,
+            "row": 4,
+            "fixed": false
+          },
+          {
+            "id": "c1",
+            "kind": "ball",
+            "col": 3,
+            "row": 4,
+            "size": "m"
+          },
+          {
+            "id": "p4",
+            "kind": "plank",
+            "col": 2,
+            "row": 7,
+            "length": 4,
+            "angle": -30,
+            "fixed": true
+          },
+          {
+            "id": "c2",
+            "kind": "ball",
+            "col": 7,
+            "row": 9,
+            "size": "l"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 9,
+            "row": 9
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 10,
+            "row": 9
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 11,
+            "row": 9
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 12,
+            "row": 9
+          }
+        ]
+      },
+      "outcome": "success",
+      "feedback": "Attempt 1 of 12: SUCCESS\nSuccess: 8-part chain b1 → k1 → c1 → c2 → d1 → d2 → d3 → d4 → finale.",
+      "chain": [
+        "b1",
+        "k1",
+        "c1",
+        "c2",
+        "d1",
+        "d2",
+        "d3",
+        "d4"
+      ],
+      "overkillScore": 8,
+      "hash": "3fd86ca66aef302f"
+    }
+  ]
+}

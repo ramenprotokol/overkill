@@ -1,0 +1,280 @@
+{
+  "chore": "mist the fern",
+  "id": "mist-the-fern",
+  "designer": "Claude Opus 5.5 (claude-opus-5-5), offline, through npm run design",
+  "engine": "@dimforge/rapier2d-deterministic-compat@0.21.0",
+  "maxAttempts": 12,
+  "maxPreviewsPerAttempt": 3,
+  "status": "success",
+  "pendingPreviews": 0,
+  "attempts": [
+    {
+      "attempt": 1,
+      "previews": 1,
+      "input": {
+        "note": "Shelf dominoes, a double-back ramp and a relay ball walk a mister to the corner, where the last domino sits on a seesaw under the fern.",
+        "finale": {
+          "kind": "plant",
+          "label": "mist the fern",
+          "col": 15,
+          "row": 8
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "left",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 13,
+            "row": 2,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "p5",
+            "kind": "plank",
+            "col": 10,
+            "row": 2,
+            "length": 2,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 15,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 14,
+            "row": 1
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 13,
+            "row": 1
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 12,
+            "row": 1
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 10,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 7,
+            "row": 5,
+            "length": 5,
+            "angle": 15,
+            "fixed": true
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 2,
+            "row": 7,
+            "length": 5,
+            "angle": -30,
+            "fixed": true
+          },
+          {
+            "id": "b3",
+            "kind": "ball",
+            "col": 6,
+            "row": 9,
+            "size": "m"
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 8,
+            "row": 9
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 9,
+            "row": 9
+          },
+          {
+            "id": "d6",
+            "kind": "domino",
+            "col": 10,
+            "row": 9
+          },
+          {
+            "id": "s1",
+            "kind": "seesaw",
+            "col": 13,
+            "row": 9,
+            "length": 4
+          }
+        ]
+      },
+      "outcome": "missed",
+      "feedback": "Attempt 1 of 12: MISSED\nMissed: the chain b1 → d1 → d2 → d3 → b2 → b3 → d4 stopped at d4. Closest to the finale: b1 at 6.5 cells.\nNever moved: d5, d6, s1.\nAttempts left: 11.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "d3",
+        "b2",
+        "b3",
+        "d4"
+      ],
+      "overkillScore": 0,
+      "hash": "6d269d12ef865c69"
+    },
+    {
+      "attempt": 2,
+      "previews": 1,
+      "input": {
+        "note": "The relay ball handed on half its pace and domino 4 only leaned. Cut the relay; the ramp ball now hits four floor dominoes itself.",
+        "finale": {
+          "kind": "plant",
+          "label": "mist the fern",
+          "col": 15,
+          "row": 8
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "left",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 13,
+            "row": 2,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "p5",
+            "kind": "plank",
+            "col": 10,
+            "row": 2,
+            "length": 2,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 15,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 14,
+            "row": 1
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 13,
+            "row": 1
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 12,
+            "row": 1
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 10,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 7,
+            "row": 5,
+            "length": 5,
+            "angle": 15,
+            "fixed": true
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 2,
+            "row": 7,
+            "length": 5,
+            "angle": -30,
+            "fixed": true
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 7,
+            "row": 9
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 8,
+            "row": 9
+          },
+          {
+            "id": "d6",
+            "kind": "domino",
+            "col": 9,
+            "row": 9
+          },
+          {
+            "id": "d7",
+            "kind": "domino",
+            "col": 10,
+            "row": 9
+          },
+          {
+            "id": "s1",
+            "kind": "seesaw",
+            "col": 13,
+            "row": 9,
+            "length": 4
+          }
+        ]
+      },
+      "outcome": "success",
+      "feedback": "Attempt 2 of 12: SUCCESS\nSuccess: 10-part chain b1 → d1 → d2 → d3 → b2 → d4 → d5 → d6 → d7 → s1 → finale.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "d3",
+        "b2",
+        "d4",
+        "d5",
+        "d6",
+        "d7",
+        "s1"
+      ],
+      "overkillScore": 10,
+      "hash": "07ad514bccc13ff5"
+    }
+  ]
+}

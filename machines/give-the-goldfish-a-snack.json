@@ -1,0 +1,456 @@
+{
+  "chore": "give the goldfish a snack",
+  "id": "give-the-goldfish-a-snack",
+  "designer": "Claude Opus 5.5 (claude-opus-5-5), offline, through npm run design",
+  "engine": "@dimforge/rapier2d-deterministic-compat@0.21.0",
+  "maxAttempts": 12,
+  "maxPreviewsPerAttempt": 3,
+  "status": "success",
+  "pendingPreviews": 0,
+  "attempts": [
+    {
+      "attempt": 1,
+      "previews": 1,
+      "input": {
+        "note": "Zig-zag snack route: a shelf of dominoes, two ramps, a relay ball and six more dominoes. The goldfish was not consulted.",
+        "finale": {
+          "kind": "bowl",
+          "label": "give the goldfish a snack",
+          "col": 15,
+          "row": 9
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "right",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 5,
+            "row": 2,
+            "length": 6,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 3,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 4,
+            "row": 1
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 5,
+            "row": 1
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 6,
+            "row": 1
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 7,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 7,
+            "row": 5,
+            "length": 5,
+            "angle": 15,
+            "fixed": true
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 2,
+            "row": 7,
+            "length": 5,
+            "angle": -30,
+            "fixed": true
+          },
+          {
+            "id": "b3",
+            "kind": "ball",
+            "col": 6,
+            "row": 9,
+            "size": "l"
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 9,
+            "row": 9
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 10,
+            "row": 9
+          },
+          {
+            "id": "d6",
+            "kind": "domino",
+            "col": 11,
+            "row": 9
+          },
+          {
+            "id": "d7",
+            "kind": "domino",
+            "col": 12,
+            "row": 9
+          },
+          {
+            "id": "d8",
+            "kind": "domino",
+            "col": 13,
+            "row": 9
+          },
+          {
+            "id": "d9",
+            "kind": "domino",
+            "col": 14,
+            "row": 9
+          }
+        ]
+      },
+      "outcome": "missed",
+      "feedback": "Attempt 1 of 12: MISSED\nMissed: the chain b1 → d1 → d2 → d3 → b2 stopped at b2. Closest to the finale: b2 at 10.9 cells.\nNever moved: b3, d4, d5, d6, d7, d8, d9.\nAttempts left: 11.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "d3",
+        "b2"
+      ],
+      "overkillScore": 0,
+      "hash": "d1068a257bb7e7ce"
+    },
+    {
+      "attempt": 2,
+      "previews": 1,
+      "input": {
+        "note": "Domino 3 pinned the relay ball to the shelf instead of kicking it. Moved the ball a cell away so the domino's tip does the kicking.",
+        "finale": {
+          "kind": "bowl",
+          "label": "give the goldfish a snack",
+          "col": 15,
+          "row": 9
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "right",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p0",
+            "kind": "plank",
+            "col": 2,
+            "row": 2,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 5,
+            "row": 2,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 2,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 4,
+            "row": 1
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 5,
+            "row": 1
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 7,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 7,
+            "row": 5,
+            "length": 5,
+            "angle": 15,
+            "fixed": true
+          },
+          {
+            "id": "p4",
+            "kind": "plank",
+            "col": 10,
+            "row": 4,
+            "length": 2,
+            "angle": 60,
+            "fixed": true
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 2,
+            "row": 7,
+            "length": 5,
+            "angle": -30,
+            "fixed": true
+          },
+          {
+            "id": "b3",
+            "kind": "ball",
+            "col": 6,
+            "row": 9,
+            "size": "l"
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 9,
+            "row": 9
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 10,
+            "row": 9
+          },
+          {
+            "id": "d6",
+            "kind": "domino",
+            "col": 11,
+            "row": 9
+          },
+          {
+            "id": "d7",
+            "kind": "domino",
+            "col": 12,
+            "row": 9
+          },
+          {
+            "id": "d8",
+            "kind": "domino",
+            "col": 13,
+            "row": 9
+          },
+          {
+            "id": "d9",
+            "kind": "domino",
+            "col": 14,
+            "row": 9
+          }
+        ]
+      },
+      "outcome": "missed",
+      "feedback": "Attempt 2 of 12: MISSED\nMissed: the chain b1 → d1 → d2 → d3 → b2 → b3 → d4 stopped at d4. Closest to the finale: d4 at 6 cells.\nNever moved: d5, d6, d7, d8, d9.\nAttempts left: 10.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "d3",
+        "b2",
+        "b3",
+        "d4"
+      ],
+      "overkillScore": 0,
+      "hash": "8cd69cda416e3236"
+    },
+    {
+      "attempt": 3,
+      "previews": 1,
+      "input": {
+        "note": "The large relay ball reached domino 4 at a stroll and it only leaned. A medium ball takes more of the pace off the ramp.",
+        "finale": {
+          "kind": "bowl",
+          "label": "give the goldfish a snack",
+          "col": 15,
+          "row": 9
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "right",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p0",
+            "kind": "plank",
+            "col": 2,
+            "row": 2,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 5,
+            "row": 2,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 2,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 4,
+            "row": 1
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 5,
+            "row": 1
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 7,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 7,
+            "row": 5,
+            "length": 5,
+            "angle": 15,
+            "fixed": true
+          },
+          {
+            "id": "p4",
+            "kind": "plank",
+            "col": 10,
+            "row": 4,
+            "length": 2,
+            "angle": 60,
+            "fixed": true
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 2,
+            "row": 7,
+            "length": 5,
+            "angle": -30,
+            "fixed": true
+          },
+          {
+            "id": "b3",
+            "kind": "ball",
+            "col": 6,
+            "row": 9,
+            "size": "m"
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 9,
+            "row": 9
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 10,
+            "row": 9
+          },
+          {
+            "id": "d6",
+            "kind": "domino",
+            "col": 11,
+            "row": 9
+          },
+          {
+            "id": "d7",
+            "kind": "domino",
+            "col": 12,
+            "row": 9
+          },
+          {
+            "id": "d8",
+            "kind": "domino",
+            "col": 13,
+            "row": 9
+          },
+          {
+            "id": "d9",
+            "kind": "domino",
+            "col": 14,
+            "row": 9
+          }
+        ]
+      },
+      "outcome": "success",
+      "feedback": "Attempt 3 of 12: SUCCESS\nSuccess: 12-part chain b1 → d1 → d2 → d3 → b2 → b3 → d4 → d5 → d6 → d7 → d8 → d9 → finale.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "d3",
+        "b2",
+        "b3",
+        "d4",
+        "d5",
+        "d6",
+        "d7",
+        "d8",
+        "d9"
+      ],
+      "overkillScore": 12,
+      "hash": "05d62fed917c3755"
+    }
+  ]
+}

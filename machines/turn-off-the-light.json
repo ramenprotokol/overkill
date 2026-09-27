@@ -1,0 +1,313 @@
+{
+  "chore": "turn off the light",
+  "id": "turn-off-the-light",
+  "designer": "Claude Opus 5.5 (claude-opus-5-5), offline, through npm run design",
+  "engine": "@dimforge/rapier2d-deterministic-compat@0.21.0",
+  "maxAttempts": 12,
+  "maxPreviewsPerAttempt": 3,
+  "status": "success",
+  "pendingPreviews": 0,
+  "attempts": [
+    {
+      "attempt": 1,
+      "previews": 1,
+      "input": {
+        "note": "Three shelf dominoes shove a ball onto a seesaw, which hands it to the floor crew. The switch never stood a chance.",
+        "finale": {
+          "kind": "switch",
+          "label": "turn off the light",
+          "col": 15,
+          "row": 9
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "right",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 5,
+            "row": 3,
+            "length": 5,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 3,
+            "row": 2,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 5,
+            "row": 2
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 6,
+            "row": 2
+          },
+          {
+            "id": "b2",
+            "kind": "ball",
+            "col": 7,
+            "row": 2,
+            "size": "m"
+          },
+          {
+            "id": "s1",
+            "kind": "seesaw",
+            "col": 7,
+            "row": 9,
+            "length": 6
+          },
+          {
+            "id": "b3",
+            "kind": "ball",
+            "col": 11,
+            "row": 9,
+            "size": "m"
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 12,
+            "row": 9
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 13,
+            "row": 9
+          },
+          {
+            "id": "d6",
+            "kind": "domino",
+            "col": 14,
+            "row": 9
+          }
+        ]
+      },
+      "outcome": "missed",
+      "feedback": "Attempt 1 of 12: MISSED\nMissed: the chain b1 → d1 → d2 → d3 → b2 stopped at b2. Closest to the finale: b2 at 10.3 cells.\nNever moved: b3, d4, d5, d6, s1.\nAttempts left: 11.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "d3",
+        "b2"
+      ],
+      "overkillScore": 0,
+      "hash": "0e504ffa896974c9"
+    },
+    {
+      "attempt": 2,
+      "previews": 1,
+      "input": {
+        "note": "Balls jam under dominoes, so the ball is gone from the handoff. Nine stairs, one domino each, straight down to the switch.",
+        "finale": {
+          "kind": "switch",
+          "label": "turn off the light",
+          "col": 15,
+          "row": 9
+        },
+        "firstPush": {
+          "ball": "b1",
+          "direction": "right",
+          "strength": "medium"
+        },
+        "parts": [
+          {
+            "id": "p1",
+            "kind": "plank",
+            "col": 2,
+            "row": 2,
+            "length": 3,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "b1",
+            "kind": "ball",
+            "col": 1,
+            "row": 1,
+            "size": "m"
+          },
+          {
+            "id": "d1",
+            "kind": "domino",
+            "col": 2,
+            "row": 1
+          },
+          {
+            "id": "d2",
+            "kind": "domino",
+            "col": 3,
+            "row": 1
+          },
+          {
+            "id": "p2",
+            "kind": "plank",
+            "col": 4,
+            "row": 3,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d3",
+            "kind": "domino",
+            "col": 4,
+            "row": 2
+          },
+          {
+            "id": "p3",
+            "kind": "plank",
+            "col": 5,
+            "row": 4,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d4",
+            "kind": "domino",
+            "col": 5,
+            "row": 3
+          },
+          {
+            "id": "p4",
+            "kind": "plank",
+            "col": 6,
+            "row": 5,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d5",
+            "kind": "domino",
+            "col": 6,
+            "row": 4
+          },
+          {
+            "id": "p5",
+            "kind": "plank",
+            "col": 7,
+            "row": 6,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d6",
+            "kind": "domino",
+            "col": 7,
+            "row": 5
+          },
+          {
+            "id": "p6",
+            "kind": "plank",
+            "col": 8,
+            "row": 7,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d7",
+            "kind": "domino",
+            "col": 8,
+            "row": 6
+          },
+          {
+            "id": "p7",
+            "kind": "plank",
+            "col": 9,
+            "row": 8,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d8",
+            "kind": "domino",
+            "col": 9,
+            "row": 7
+          },
+          {
+            "id": "p8",
+            "kind": "plank",
+            "col": 10,
+            "row": 9,
+            "length": 1,
+            "angle": 0,
+            "fixed": true
+          },
+          {
+            "id": "d9",
+            "kind": "domino",
+            "col": 10,
+            "row": 8
+          },
+          {
+            "id": "d10",
+            "kind": "domino",
+            "col": 11,
+            "row": 9
+          },
+          {
+            "id": "d11",
+            "kind": "domino",
+            "col": 12,
+            "row": 9
+          },
+          {
+            "id": "d12",
+            "kind": "domino",
+            "col": 13,
+            "row": 9
+          },
+          {
+            "id": "d13",
+            "kind": "domino",
+            "col": 14,
+            "row": 9
+          }
+        ]
+      },
+      "outcome": "success",
+      "feedback": "Attempt 2 of 12: SUCCESS\nSuccess: 14-part chain b1 → d1 → d2 → d3 → d4 → d5 → d6 → d7 → d8 → d9 → d10 → d11 → d12 → d13 → finale.",
+      "chain": [
+        "b1",
+        "d1",
+        "d2",
+        "d3",
+        "d4",
+        "d5",
+        "d6",
+        "d7",
+        "d8",
+        "d9",
+        "d10",
+        "d11",
+        "d12",
+        "d13"
+      ],
+      "overkillScore": 14,
+      "hash": "ae377a27e53bc6a9"
+    }
+  ]
+}
