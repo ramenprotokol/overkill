@@ -24,6 +24,18 @@ describe("choreId", () => {
   });
 });
 
+describe("judgeAttempt", () => {
+  it("can keep every pose for drawing without changing the judgement", () => {
+    const plain = judgeAttempt(goldenDominoes, 1, 12);
+    const drawn = judgeAttempt(goldenDominoes, 1, 12, { record: true });
+    expect(drawn.feedback).toBe(plain.feedback);
+    expect(drawn.record.traceHash).toBe(plain.record.traceHash);
+    expect(plain.sim!.frames).toBeUndefined();
+    expect(drawn.sim!.frames!.count).toBeGreaterThan(0);
+    expect(judgeAttempt({ parts: "nope" }, 1, 12).sim).toBeUndefined();
+  });
+});
+
 describe("design harness", () => {
   const fresh = () => newMachine("turn off the light");
 

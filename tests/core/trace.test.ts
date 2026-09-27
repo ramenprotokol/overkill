@@ -37,6 +37,7 @@ describe("analyze (hand-built traces)", () => {
     expect(r.overkillScore).toBe(6);
     expect(r.summary).toBe("Success: 6-part chain b1 → d1 → d2 → d3 → d4 → d5 → finale.");
     expect(r.joinedAt).toEqual({ b1: 0, d1: 10, d2: 20, d3: 30, d4: 40, d5: 50 });
+    expect(r.parents).toEqual({ b1: null, d1: "b1", d2: "d1", d3: "d2", d4: "d3", d5: "d4" });
     expect(r.finaleStep).toBe(60);
   });
 

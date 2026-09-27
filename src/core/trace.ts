@@ -54,6 +54,8 @@ export interface AttemptReport {
   summary: string;
   /** Every part that joined the chain, with the step it joined at (the pushed ball joins at 0). */
   joinedAt: Record<string, number>;
+  /** The chain part each joined part joined from (null for the pushed ball). */
+  parents: Record<string, string | null>;
   /** Step at which the part named by finaleHitBy touched the finale, or null. */
   finaleStep: number | null;
 }
@@ -132,6 +134,7 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
   const success = outcome === "success";
   const report: Omit<AttemptReport, "summary"> = {
     joinedAt: Object.fromEntries(joinedAt),
+    parents: Object.fromEntries(parent),
     finaleStep: trigger?.step ?? null,
     outcome,
     success,

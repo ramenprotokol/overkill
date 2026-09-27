@@ -10,7 +10,7 @@ const missed: AttemptReport = {
   outcome: "missed", success: false, chain: ["b1", "d1"], overkillScore: 0, finaleHitBy: null, stoppedAt: "d1",
   closest: { part: "d1", cells: 2.1 }, neverMoved: ["d2", "d3"], fellOff: ["b1"],
   summary: "Missed: the chain b1 → d1 stopped at d1. Closest to the finale: d1 at 2.1 cells.",
-  joinedAt: { b1: 0, d1: 40 }, finaleStep: null,
+  joinedAt: { b1: 0, d1: 40 }, parents: { b1: null, d1: "b1" }, finaleStep: null,
 };
 
 describe("formatReport", () => {
@@ -29,7 +29,7 @@ describe("formatReport", () => {
       outcome: "success", success: true, chain: ["b1", "d1", "d2", "d3", "d4", "d5"], overkillScore: 6, finaleHitBy: "d5", stoppedAt: null,
       closest: { part: "d5", cells: 0 }, neverMoved: [], fellOff: [],
       summary: "Success: 6-part chain b1 → d1 → d2 → d3 → d4 → d5 → finale.",
-      joinedAt: { b1: 0, d1: 10, d2: 20, d3: 30, d4: 40, d5: 50 }, finaleStep: 60,
+      joinedAt: { b1: 0, d1: 10, d2: 20, d3: 30, d4: 40, d5: 50 }, parents: { b1: null, d1: "b1", d2: "d1", d3: "d2", d4: "d3", d5: "d4" }, finaleStep: 60,
     };
     expect(formatReport(4, 12, won)).toBe("Attempt 4 of 12: SUCCESS\nSuccess: 6-part chain b1 → d1 → d2 → d3 → d4 → d5 → finale.");
   });

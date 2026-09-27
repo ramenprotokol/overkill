@@ -1,7 +1,7 @@
 import { parseBlueprint, type Blueprint } from "../core/blueprint.js";
 import { blueprintBodies } from "../core/geometry.js";
 import { findOverlaps } from "../core/preview.js";
-import { runSim } from "../core/sim.js";
+import { runSim, type SimResult } from "../core/sim.js";
 import { analyze, finaleTriggeredWithoutPush, type AttemptReport } from "../core/trace.js";
 import { formatInvalid, formatReport } from "./format.js";
 
@@ -21,13 +21,20 @@ export interface Judgement {
   /** The blueprint was invalid and never simulated; the tool result is sent as an error. */
   isError: boolean;
   success: boolean;
+  /** The physics run, when the blueprint was valid (with every pose when JudgeOptions.record is set). */
+  sim?: SimResult;
+}
+
+export interface JudgeOptions {
+  /** Keep every part's pose after every step, for drawing the run. Doesn't change the result. */
+  record?: boolean;
 }
 
 /**
  * Judges one `simulate` call exactly as the agent loop does: schema, then starting overlaps, then the physics run,
  * the trace analysis and the no-push rule. Shared by the loop and the offline design harness, so both apply the same checks.
  */
-export function judgeAttempt(input: unknown, attempt: number, maxAttempts: number): Judgement {
+export function judgeAttempt(input: unknown, attempt: number, maxAttempts: number, options: JudgeOptions = {}): Judgement {
   const parsed = parseBlueprint(input);
   if (!parsed.ok) {
     return {
@@ -48,7 +55,7 @@ export function judgeAttempt(input: unknown, attempt: number, maxAttempts: numbe
       success: false,
     };
   }
-  const sim = runSim(bp);
+  const sim = runSim(bp, undefined, { record: options.record ?? false });
   let report = analyze(bp, sim);
   // A machine that hits the finale even when nobody pushes it does the chore on its own, not through the chain.
   if (report.success && finaleTriggeredWithoutPush(bp)) {
@@ -65,5 +72,6 @@ export function judgeAttempt(input: unknown, attempt: number, maxAttempts: numbe
     feedback: formatReport(attempt, maxAttempts, report),
     isError: false,
     success: report.success,
+    sim,
   };
 }
