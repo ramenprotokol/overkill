@@ -1,0 +1,1124 @@
+/*
+  OVERKILL drawing set. A cyanotype blueprint: chalk linework on Prussian blue, with one red pencil for the redline,
+  the drafting mark for "this changed here". Everything that moves or matters is redlined; everything else is chalk.
+*/
+:root {
+  --paper: #17406e;
+  --paper-deep: #0e2b4e;
+  --paper-lift: #1d4a7c;
+  --chalk: #e8f0f7;
+  --chalk-dim: #a9c1d9;
+  --grid: rgba(232, 240, 247, 0.11);
+  --grid-soft: rgba(232, 240, 247, 0.045);
+  --redline: #ff6f4f;
+  --redline-ink: #ff9a80;
+  --redline-wash: rgba(255, 111, 79, 0.14);
+
+  --f-display: "Big Shoulders Display", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --f-body: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --gutter: clamp(16px, 3.2vw, 40px);
+  --rule: 1px solid rgba(232, 240, 247, 0.34);
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--paper-deep);
+  /* The blueprint paper: a faint drafting grid and a little fibre. */
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    linear-gradient(var(--grid-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-soft) 1px, transparent 1px);
+  background-size: 240px 240px, 24px 24px, 24px 24px;
+  color: var(--chalk);
+  font-family: var(--f-body);
+  font-size: 1.0625rem;
+  line-height: 1.45;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a {
+  color: var(--chalk);
+  text-decoration-color: rgba(232, 240, 247, 0.45);
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-color: var(--redline);
+}
+
+:focus-visible {
+  outline: 2px solid var(--redline-ink);
+  outline-offset: 3px;
+}
+
+.skip {
+  position: absolute;
+  left: var(--gutter);
+  top: -4rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--chalk);
+  color: var(--paper-deep);
+  z-index: 10;
+}
+
+.skip:focus {
+  top: 0.75rem;
+}
+
+.label {
+  font-family: var(--f-body);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  margin: 0;
+}
+
+.label-aside {
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-style: italic;
+  margin-left: 0.6em;
+}
+
+/* ---- masthead ------------------------------------------------------------------------------------------------ */
+
+.masthead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  gap: 0.5rem 2.5rem;
+  padding: clamp(20px, 4vw, 44px) var(--gutter) 1.1rem;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.wordmark {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: clamp(4rem, 13vw, 9.5rem);
+  line-height: 0.78;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  color: var(--chalk);
+  /* Stroked, not filled: the title is lettered on the drawing, not printed on it. */
+  -webkit-text-stroke: 0.02em var(--chalk);
+  color: transparent;
+  padding-top: 0.08em;
+}
+
+.masthead-copy {
+  max-width: 38rem;
+  padding-bottom: 0.2rem;
+}
+
+.tagline {
+  margin: 0 0 0.45rem;
+  font-size: clamp(1.25rem, 2.3vw, 1.6rem);
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.honesty {
+  margin: 0;
+  color: var(--chalk-dim);
+  font-style: italic;
+  max-width: 34rem;
+}
+
+/* ---- sheet index --------------------------------------------------------------------------------------------- */
+
+.index {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0.9rem var(--gutter) 1.1rem;
+}
+
+.chores {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: var(--rule);
+  border-left: var(--rule);
+}
+
+.chore {
+  display: grid;
+  gap: 0.1rem;
+  height: 100%;
+  padding: 0.55rem 0.75rem 0.6rem;
+  border-right: var(--rule);
+  border-bottom: var(--rule);
+  text-decoration: none;
+  color: var(--chalk);
+  background: rgba(14, 43, 78, 0.35);
+}
+
+.chore:hover {
+  background: rgba(232, 240, 247, 0.06);
+}
+
+.chore[aria-current="page"] {
+  background: var(--chalk);
+  color: var(--paper-deep);
+}
+
+.chore-kind {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--redline-ink);
+}
+
+.chore[aria-current="page"] .chore-kind {
+  color: #b3301a;
+}
+
+.chore-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.chore-result {
+  font-size: 0.86rem;
+  color: var(--chalk-dim);
+}
+
+.chore[aria-current="page"] .chore-result {
+  color: #34506f;
+}
+
+/* ---- the sheet ----------------------------------------------------------------------------------------------- */
+
+.sheet {
+  position: relative;
+  max-width: 1440px;
+  margin: 0 auto;
+  margin-inline: max(var(--gutter), calc((100% - 1440px) / 2 + var(--gutter)));
+  padding: clamp(14px, 2vw, 24px);
+  background: var(--paper);
+  /* A drawing border: a heavy outer line and a thin inner one. */
+  border: 2px solid var(--chalk);
+  outline: 1px solid rgba(232, 240, 247, 0.5);
+  outline-offset: -9px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(19rem, 23rem);
+  grid-template-areas:
+    "message message"
+    "board side"
+    "controls side"
+    "revs side";
+  grid-template-rows: auto auto auto 1fr;
+  gap: 1.1rem 1.6rem;
+}
+
+.side {
+  grid-area: side;
+  display: grid;
+  align-content: start;
+  gap: 1.8rem;
+}
+
+.sheet:focus {
+  outline: 1px solid rgba(232, 240, 247, 0.5);
+}
+
+.route-message {
+  grid-area: message;
+  margin: 0.4rem 0.4rem 0;
+  padding: 0.55rem 0.8rem;
+  border: 1px dashed var(--redline);
+  color: var(--redline-ink);
+}
+
+.board-area {
+  grid-area: board;
+  min-width: 0;
+  padding: 0.5rem 0.4rem 0;
+}
+
+.board-host {
+  width: 100%;
+}
+
+.drawing-note {
+  margin: 0.2rem 0 0 1.4rem;
+  min-height: 1.45em;
+  font-style: italic;
+  color: var(--chalk-dim);
+}
+
+/* ---- the board (SVG, 1 unit = 1 cell) ------------------------------------------------------------------------ */
+
+.board {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+
+.board .grid {
+  fill: none;
+  stroke: var(--grid);
+  stroke-width: 0.014;
+}
+
+.board .grid-edge {
+  fill: none;
+  stroke: rgba(232, 240, 247, 0.4);
+  stroke-width: 0.022;
+}
+
+.board .zone {
+  font-family: var(--f-body);
+  font-size: 0.32px;
+  fill: var(--chalk-dim);
+  text-anchor: middle;
+}
+
+.board .floor-hatch {
+  fill: none;
+  stroke: rgba(232, 240, 247, 0.45);
+  stroke-width: 0.016;
+}
+
+.board .ink {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 0.032;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.35s ease;
+}
+
+.board .ink.thin {
+  stroke-width: 0.018;
+}
+
+.board .ink.thick {
+  stroke-width: 0.055;
+}
+
+.board .ink.faint {
+  opacity: 0.45;
+}
+
+.board .fill {
+  fill: var(--paper);
+  transition: fill 0.35s ease;
+}
+
+.board .hatch {
+  fill: none;
+  stroke: rgba(232, 240, 247, 0.6);
+  stroke-width: 0.012;
+}
+
+.board .pip,
+.board .bolt,
+.board .pin,
+.board .knob {
+  fill: var(--chalk);
+  transition: fill 0.35s ease;
+}
+
+.board .finale-kind {
+  font-family: var(--f-body);
+  font-weight: 600;
+  font-size: 0.26px;
+  letter-spacing: 0.04px;
+  fill: var(--chalk-dim);
+  text-anchor: middle;
+}
+
+.board .envelope {
+  fill: none;
+  stroke: none;
+}
+
+/* A part the chain has reached is redlined. */
+.board .part.joined .ink {
+  stroke: var(--redline);
+}
+
+.board .part.joined .fill {
+  fill: #213f68;
+}
+
+.board .part.joined .pip,
+.board .part.joined .pin {
+  fill: var(--redline);
+}
+
+.board .red-stroke {
+  fill: none;
+  stroke: var(--redline);
+  stroke-width: 0.036;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.board .red-stroke.thin {
+  stroke-width: 0.02;
+}
+
+.board .red-stroke.dashed {
+  stroke-dasharray: 0.07 0.06;
+}
+
+.board .balloon {
+  fill: var(--paper);
+  stroke: var(--redline);
+  stroke-width: 0.032;
+}
+
+.board .balloon-num {
+  font-family: var(--f-body);
+  font-weight: 600;
+  font-size: 0.32px;
+  fill: var(--redline-ink);
+  text-anchor: middle;
+}
+
+.board .red-label {
+  font-family: var(--f-body);
+  font-weight: 600;
+  font-size: 0.24px;
+  letter-spacing: 0.02px;
+  fill: var(--redline-ink);
+  text-anchor: middle;
+}
+
+.board .red-label.dim {
+  font-size: 0.3px;
+}
+
+/* Redline that appears when the playhead reaches it, drawn in like a pencil stroke. */
+.board .timed {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.board .timed.on {
+  opacity: 1;
+}
+
+.board .timed .red-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 0.5s ease-out;
+}
+
+.board .timed .red-stroke.dashed {
+  stroke-dasharray: 1;
+}
+
+.board .timed.on .red-stroke {
+  stroke-dashoffset: 0;
+}
+
+.board .timed.instant,
+.board .timed.instant .red-stroke {
+  transition: none;
+}
+
+/* The finale reacts when something in the chain reaches it. */
+.board .finale-icon .reward {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.board .finale-icon.hit .reward {
+  opacity: 1;
+}
+
+.board .finale-icon .kibble {
+  fill: var(--redline);
+}
+
+.board .finale-icon .drop {
+  fill: var(--chalk);
+}
+
+.board .finale-icon .lever {
+  transition: transform 0.22s cubic-bezier(0.5, 1.8, 0.6, 1);
+}
+
+.board .finale-icon.hit .lever {
+  transform: rotate(180deg);
+}
+
+.board .finale-icon .leaf {
+  transform-origin: -0.2px 0;
+  transition: transform 0.6s ease-in-out;
+}
+
+.board .finale-icon.hit .leaf {
+  transform: scaleX(0.16);
+}
+
+.board .finale-icon .leaves {
+  transform-origin: 0 0.1px;
+  transition: transform 0.6s ease-out;
+}
+
+.board .finale-icon.hit .leaves {
+  transform: rotate(-7deg) scale(1.1);
+}
+
+.board .finale-icon .swing {
+  transform-origin: 0 -0.3px;
+}
+
+.board .finale-icon.hit .swing {
+  animation: ring 1.2s ease-out;
+}
+
+.board .finale-icon.hit .drop {
+  animation: drip 0.9s ease-in both;
+}
+
+.board .finale-icon.hit .kibble {
+  animation: drip 0.5s ease-in both;
+}
+
+.board .finale-icon.instant *,
+.board .finale-icon.instant {
+  transition: none !important;
+  animation: none !important;
+}
+
+@keyframes ring {
+  0% { transform: rotate(0); }
+  12% { transform: rotate(16deg); }
+  30% { transform: rotate(-12deg); }
+  50% { transform: rotate(8deg); }
+  72% { transform: rotate(-4deg); }
+  100% { transform: rotate(0); }
+}
+
+@keyframes drip {
+  from { transform: translateY(-0.35px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ---- controls ------------------------------------------------------------------------------------------------ */
+
+.controls {
+  grid-area: controls;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.1rem;
+  padding: 0.75rem 0.4rem;
+  border-top: var(--rule);
+  border-bottom: var(--rule);
+}
+
+.btn {
+  font: 600 0.85rem/1 var(--f-body);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk);
+  background: transparent;
+  border: 1px solid var(--chalk);
+  border-radius: 0;
+  padding: 0.6rem 1rem 0.55rem;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  background: rgba(232, 240, 247, 0.08);
+}
+
+.btn-primary {
+  min-width: 6.2rem;
+  background: var(--chalk);
+  color: var(--paper-deep);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.speed {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.speed legend {
+  float: left;
+  margin-right: 0.6rem;
+}
+
+.speed label {
+  position: relative;
+}
+
+.speed input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.speed span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 44px;
+  font-family: var(--f-mono);
+  font-size: 0.78rem;
+  border: 1px solid rgba(232, 240, 247, 0.5);
+  margin-left: -1px;
+  color: var(--chalk-dim);
+}
+
+.speed input:checked + span {
+  background: var(--chalk);
+  color: var(--paper-deep);
+  border-color: var(--chalk);
+}
+
+.speed input:focus-visible + span {
+  outline: 2px solid var(--redline-ink);
+  outline-offset: 2px;
+}
+
+.scrub {
+  flex: 1 1 14rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.clock {
+  font-family: var(--f-mono);
+  font-size: 0.78rem;
+  min-width: 5.2rem;
+  text-align: right;
+  color: var(--chalk-dim);
+}
+
+input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+input[type="range"]:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--chalk-dim);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 2px;
+  background: var(--chalk-dim);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 22px;
+  margin-top: -10px;
+  background: var(--redline);
+  border: 0;
+  border-radius: 0;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 22px;
+  background: var(--redline);
+  border: 0;
+  border-radius: 0;
+}
+
+/* ---- title block --------------------------------------------------------------------------------------------- */
+
+.titleblock {
+  align-self: start;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 2px solid var(--chalk);
+  margin-top: 0.4rem;
+  position: relative;
+}
+
+.tb-cell {
+  display: grid;
+  align-content: start;
+  gap: 0.15rem;
+  padding: 0.5rem 0.7rem 0.6rem;
+  border-right: var(--rule);
+  border-bottom: var(--rule);
+  min-width: 0;
+}
+
+.tb-cell:nth-child(2n) {
+  border-right: 0;
+}
+
+.tb-drawing,
+.tb-chain,
+.tb-checked {
+  grid-column: 1 / -1;
+  border-right: 0;
+}
+
+.tb-cell .label {
+  font-size: 0.68rem;
+}
+
+.tb-value {
+  font-size: 0.98rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.tb-project .tb-value {
+  font-family: var(--f-display);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 1.15rem;
+}
+
+.tb-chore {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  line-height: 0.95;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.tb-count {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 4.2rem;
+  line-height: 0.85;
+  color: var(--redline);
+  font-variant-numeric: tabular-nums;
+}
+
+.tb-of {
+  font-size: 1.9rem;
+  color: var(--chalk-dim);
+}
+
+.tb-sub {
+  font-size: 0.92rem;
+  color: var(--chalk-dim);
+  overflow-wrap: anywhere;
+}
+
+.tb-checked .tb-sub {
+  font-family: var(--f-mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  margin-top: 0.25rem;
+}
+
+.sheet[data-verified="mismatch"] .tb-checked .tb-sub {
+  color: var(--redline-ink);
+}
+
+.tb-chain {
+  position: relative;
+}
+
+.tb-stamp {
+  position: absolute;
+  right: 0.9rem;
+  top: 1.5rem;
+  pointer-events: none;
+}
+
+.stamp {
+  display: inline-block;
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 1.55rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--redline);
+  border: 3px double var(--redline);
+  padding: 0.3rem 0.55rem 0.2rem;
+  transform: rotate(-7deg) scale(1.5);
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1);
+  background: rgba(23, 64, 110, 0.85);
+}
+
+.stamp.on {
+  opacity: 1;
+  transform: rotate(-7deg) scale(1);
+}
+
+.stamp.stamp-missed,
+.stamp.stamp-not_overkill,
+.stamp.stamp-invalid {
+  color: var(--chalk);
+  border-color: var(--chalk);
+  font-size: 1.2rem;
+}
+
+/* ---- revisions ----------------------------------------------------------------------------------------------- */
+
+.revisions {
+  grid-area: revs;
+  min-width: 0;
+  padding: 0 0.4rem 0.6rem;
+}
+
+.revs {
+  list-style: none;
+  margin: 0.55rem 0 1rem;
+  padding: 0;
+  border-top: var(--rule);
+}
+
+.rev {
+  display: grid;
+  grid-template-columns: 2.4rem 9.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.2rem 0.9rem;
+  padding: 0.6rem 0.4rem;
+  border-bottom: var(--rule);
+  text-decoration: none;
+  color: var(--chalk);
+}
+
+.rev:hover {
+  background: rgba(232, 240, 247, 0.05);
+}
+
+.rev[aria-current="true"] {
+  background: var(--redline-wash);
+}
+
+/* The revision delta: a numbered triangle, the drafting mark for a revision. */
+.delta {
+  position: relative;
+  display: inline-grid;
+  place-items: end center;
+  width: 1.9rem;
+  height: 1.65rem;
+  padding-bottom: 0.1rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--chalk);
+  align-self: center;
+}
+
+.delta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--chalk);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%, 50% 0, 50% 9%, 8.5% 95%, 91.5% 95%, 50% 9%);
+}
+
+.rev[aria-current="true"] .delta::before {
+  background: var(--redline);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.rev[aria-current="true"] .delta {
+  color: var(--paper-deep);
+}
+
+.delta {
+  isolation: isolate;
+}
+
+.delta::before {
+  z-index: -1;
+}
+
+.rev-outcome {
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.rev-success .rev-outcome {
+  color: var(--redline-ink);
+}
+
+.rev-note {
+  font-style: italic;
+  color: var(--chalk-dim);
+}
+
+.rev[aria-current="true"] .rev-note {
+  color: var(--chalk);
+}
+
+.feedback {
+  border: 1px dashed rgba(232, 240, 247, 0.45);
+  padding: 0.7rem 0.9rem 0.8rem;
+  background: rgba(14, 43, 78, 0.45);
+}
+
+.feedback-text {
+  margin: 0.45rem 0 0;
+  font-family: var(--f-mono);
+  font-size: 0.74rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--chalk);
+}
+
+/* ---- general notes ------------------------------------------------------------------------------------------- */
+
+.notes {
+  padding: 0 0.4rem 0.6rem;
+}
+
+.notes ol {
+  margin: 0.55rem 0 0;
+  padding-left: 1.3rem;
+  color: var(--chalk-dim);
+  font-size: 0.95rem;
+}
+
+.notes li {
+  margin-bottom: 0.5rem;
+  padding-left: 0.2rem;
+}
+
+.notes li::marker {
+  font-weight: 600;
+  color: var(--chalk);
+}
+
+/* ---- colophon ------------------------------------------------------------------------------------------------ */
+
+.colophon {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 1.2rem var(--gutter) 2.4rem;
+  color: var(--chalk-dim);
+  font-size: 0.92rem;
+}
+
+.colophon p {
+  margin: 0.2rem 0;
+}
+
+.noscript {
+  margin: 1rem var(--gutter);
+  padding: 1rem;
+  border: 1px dashed var(--redline);
+}
+
+/* ---- narrower sheets ----------------------------------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .chores {
+    grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  }
+
+  .sheet {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      "message"
+      "board"
+      "controls"
+      "title"
+      "revs"
+      "notes";
+  }
+
+  .side {
+    display: contents;
+  }
+
+  .titleblock {
+    grid-area: title;
+  }
+
+  .notes {
+    grid-area: notes;
+  }
+
+  .titleblock {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .tb-drawing {
+    grid-column: span 2;
+    border-right: var(--rule);
+  }
+
+  .tb-chain {
+    grid-column: span 2;
+  }
+
+  .tb-cell:nth-child(2n) {
+    border-right: var(--rule);
+  }
+
+  .tb-cell:nth-child(4n),
+  .tb-chain,
+  .tb-checked {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    font-size: 1rem;
+  }
+
+  .masthead {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem;
+  }
+
+  /* The index becomes a strip you swipe, so the machine itself is on the first screen. */
+  .chores {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--chalk-dim) transparent;
+  }
+
+  .chores li {
+    flex: 0 0 10.4rem;
+    scroll-snap-align: start;
+  }
+
+  .chore {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .chore-name {
+    font-size: 0.98rem;
+  }
+
+  .sheet {
+    margin-inline: 8px;
+    padding: 10px 6px 14px;
+    outline-offset: -6px;
+  }
+
+  .board-area {
+    padding: 0.3rem 0 0;
+  }
+
+  .drawing-note {
+    margin-left: 0.3rem;
+  }
+
+  .controls {
+    gap: 0.6rem;
+  }
+
+  .speed legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .speed span {
+    min-width: 2.6rem;
+  }
+
+  .titleblock {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tb-drawing,
+  .tb-chain,
+  .tb-checked {
+    grid-column: 1 / -1;
+    border-right: 0;
+  }
+
+  .tb-cell:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .tb-cell:nth-child(4n) {
+    border-right: 0;
+  }
+
+  .tb-rev,
+  .tb-drawn {
+    border-right: var(--rule) !important;
+  }
+
+  .rev {
+    grid-template-columns: 2.2rem minmax(0, 1fr);
+  }
+
+  .rev-note {
+    grid-column: 2;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+}

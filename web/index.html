@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OVERKILL · chain-reaction machines, checked by physics</title>
+    <meta name="description" content="Claude Opus 5.5 overengineers tiny chores as chain-reaction machines. Watch each one run in real physics, in your browser, with every failed attempt kept." />
+    <meta name="theme-color" content="#0e2b4e" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <a class="skip" href="#sheet">Skip to the drawing</a>
+
+    <header class="masthead">
+      <h1 class="wordmark">Overkill</h1>
+      <div class="masthead-copy">
+        <p class="tagline">Claude overengineers your chores, then has to prove it works.</p>
+        <p class="honesty">Machines designed offline by Claude Opus 5.5 using the same tools and checks. Live generation needs an API key and isn't running here.</p>
+      </div>
+    </header>
+
+    <nav class="index" aria-labelledby="index-title">
+      <h2 id="index-title" class="label">Sheet index <span class="label-aside" id="index-count"></span></h2>
+      <ol id="chores" class="chores"></ol>
+    </nav>
+
+    <main id="sheet" class="sheet" data-state="loading" tabindex="-1">
+      <p id="route-message" class="route-message" role="alert" hidden></p>
+
+      <div class="board-area">
+        <div id="board-host" class="board-host"></div>
+        <p id="drawing-note" class="drawing-note"></p>
+      </div>
+
+      <div class="controls" role="group" aria-label="Playback">
+        <button id="play" class="btn btn-primary" type="button" disabled>Play</button>
+        <button id="replay" class="btn" type="button" disabled>Replay</button>
+        <fieldset class="speed">
+          <legend class="label">Speed</legend>
+          <label><input type="radio" name="speed" value="0.25" /><span>¼×</span></label>
+          <label><input type="radio" name="speed" value="0.5" /><span>½×</span></label>
+          <label><input type="radio" name="speed" value="1" checked /><span>1×</span></label>
+          <label><input type="radio" name="speed" value="2" /><span>2×</span></label>
+          <label><input type="radio" name="speed" value="4" /><span>4×</span></label>
+        </fieldset>
+        <div class="scrub">
+          <label class="label" for="scrub">Time</label>
+          <input id="scrub" type="range" min="0" max="1" step="1" value="0" disabled />
+          <output id="clock" for="scrub" class="clock">settling</output>
+        </div>
+      </div>
+
+      <div class="side">
+      <aside class="titleblock" aria-label="Title block">
+        <div class="tb-cell tb-project">
+          <span class="label">Project</span>
+          <span class="tb-value">Overkill</span>
+        </div>
+        <div class="tb-cell tb-drawn">
+          <span class="label">Drawn by</span>
+          <span class="tb-value">Claude Opus 5.5, offline</span>
+        </div>
+        <div class="tb-cell tb-drawing">
+          <span class="label">Drawing</span>
+          <span class="tb-chore" id="tb-chore"></span>
+        </div>
+        <div class="tb-cell tb-chain">
+          <span class="label">Chain</span>
+          <span class="tb-count"><span id="tb-count">0</span><span class="tb-of" id="tb-of"></span></span>
+          <span class="tb-sub" id="tb-chain-sub"></span>
+          <div class="tb-stamp" aria-hidden="true"><span id="stamp" class="stamp"></span></div>
+        </div>
+        <div class="tb-cell tb-rev">
+          <span class="label">Revision</span>
+          <span class="tb-value" id="tb-rev"></span>
+        </div>
+        <div class="tb-cell tb-finale">
+          <span class="label">Finale</span>
+          <span class="tb-value" id="tb-finale"></span>
+        </div>
+        <div class="tb-cell tb-checked">
+          <span class="label">Checked by</span>
+          <span class="tb-value">Rapier 2D 0.21, deterministic build, in this browser</span>
+          <span class="tb-sub" id="verify" role="status">Loading the physics engine…</span>
+        </div>
+      </aside>
+      <section class="notes" aria-labelledby="notes-title">
+        <h2 id="notes-title" class="label">General notes</h2>
+        <ol>
+          <li>Each sheet is one chore from the project's 20-chore eval set. Each revision is one real simulate call, and the report under it is word for word what the model would read back.</li>
+          <li>A part joins the chain when a chain part touches it and the push changes where it goes. The simulator runs every machine twice in lockstep, with and without the first push, and a part counts once it's at least 5 cm off its push-free path.</li>
+          <li>A machine works only when a chain of at least 5 parts reaches the finale, and nothing reaches the finale when nobody pushes.</li>
+          <li>Your browser re-runs every revision you open from its blueprint and checks the run's trace hash against the one recorded in Node. The balloons number the chain in order; the red pencil marks where each link happened.</li>
+        </ol>
+      </section>
+      </div>
+
+      <section class="revisions" aria-labelledby="rev-title">
+        <h2 id="rev-title" class="label">Revisions <span class="label-aside">every simulate call, in order, failures included</span></h2>
+        <ol id="revs" class="revs"></ol>
+        <div class="feedback">
+          <h3 class="label" id="feedback-title">What the model reads back</h3>
+          <pre id="feedback" class="feedback-text" aria-labelledby="feedback-title"></pre>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="colophon">
+      <p>Built by Ramen Protocol with AI assistance (Claude). Physics: Rapier 2D. Type: Big Shoulders Display, Barlow Semi Condensed, Martian Mono.</p>
+      <p>
+        <a href="https://github.com/ramenprotokol/overkill" rel="noopener">Source on GitHub</a>
+        <span aria-hidden="true">·</span>
+        <a href="/THIRD-PARTY-NOTICES.txt">Third-party notices</a>
+        <span aria-hidden="true">·</span>
+        <span>MIT licence</span>
+      </p>
+    </footer>
+    <noscript><p class="noscript">This drawing set runs its physics in your browser, so it needs JavaScript.</p></noscript>
+  </body>
+</html>

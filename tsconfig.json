@@ -11,5 +11,6 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src", "tests"]
+  "include": ["src", "tests", "web/vite.config.ts"],
+  "exclude": ["tests/e2e"]
 }
