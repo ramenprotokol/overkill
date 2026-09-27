@@ -25,7 +25,8 @@ describe("stored machines", () => {
   });
 
   describe.each(machines)("%s", (file, m) => {
-    it("is a well-formed, append-only history made under the loop's budget", () => {
+    // Numbering and outcomes are checked here; that attempts were never edited or removed is what git history shows.
+    it("is a well-formed history made under the loop's budget", () => {
       expect(file).toBe(`${m.id}.json`);
       expect(m.id).toBe(choreId(m.chore));
       expect(CHORES).toContain(m.chore);

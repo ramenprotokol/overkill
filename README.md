@@ -32,11 +32,15 @@ A part is in the chain only if the first push changed where it went.
 
 - Every pushed run also steps a push-free twin of the same machine, in lockstep. The engine is deterministic, so the two are bit-identical until the push.
 - A part joins when its pose first leaves its twin's while it is touching a part already in the chain.
-- It only counts once the push has moved it at least 5 cm off its push-free path.
+- It only counts once the push has put it at least 5 cm off its push-free path, and once it has itself moved at least 5 cm in the pushed run.
+- A gap that starts with a touch only the twin had doesn't count. The push kept something from hitting the part; it didn't move it.
+- Distances use a simple bound: the gap in position plus the gap in angle times the part's radius.
 
 So a part that falls, rolls or settles on its own is never credited, and neither is a domino that merely wobbled. A bucket riding a tipping seesaw is credited, and so is a part that was already moving when the chain knocked it somewhere new.
 
-An older motion-threshold rule got the first two cases wrong. On 553 random machines, switching rules changed no outcome.
+An older rule, based on how fast parts moved, got those cases wrong. The second and third checks came from an independent review, which found parts credited for motion only the twin made.
+
+Neither change altered any stored machine's result. Random machines almost never reach their finale, so random testing says little about outcomes.
 
 The rule isn't perfect:
 
@@ -52,7 +56,8 @@ The site shows 10 of the 20 chores in the eval set. They were designed by Claude
 - The same checks run through one shared function, `judgeAttempt`: schema, starting overlaps, physics, trace analysis and the no-push rule.
 - The same budget applies: 12 attempts, 3 previews per attempt, stop at the first success.
 - It prints the same feedback text.
-- Every `simulate` call is appended to `machines/<chore>.json` and can't be rewritten.
+- Every `simulate` call is appended to `machines/<chore>.json`. The harness never edits or removes an attempt, and it runs one call per chore at a time, as the loop does.
+- The files are plain JSON, so a person could still edit one by hand. The re-simulation test would catch a changed result. It wouldn't catch a deleted attempt.
 
 | Chore | Finale | Attempts | Chain | Parts on the board |
 |---|---|---|---|---|
@@ -96,17 +101,18 @@ Needs Node 22.
 
 ```bash
 npm install
-npm test            # 222 unit tests: core, trace, harness, agent loop, spike, stored machines, site config
+npm test            # 229 unit tests: core, trace, harness, agent loop, spike, stored machines, site config
 npm run typecheck   # Node code, web app and browser tests
 npm run build       # writes dist/ (static site, _headers, THIRD-PARTY-NOTICES.txt)
 npm run test:e2e    # builds, then checks dist/ in headless Chromium
 ```
 
-`npm run test:e2e` serves `dist/` locally with the headers from `dist/_headers` applied, so the Content Security Policy is live. It then checks four things:
+`npm run test:e2e` serves `dist/` locally with the headers from `dist/_headers` applied, so the Content Security Policy is live. It then checks five things:
 
 - Every stored attempt run in the browser reaches the same trace hash as Node, with no console errors or CSP violations.
 - The site autoplays, and fits a 400 px screen without sideways scrolling.
 - Reduced motion turns autoplay off.
+- The skip link keeps the current sheet, and following a revision link keeps keyboard focus on it.
 - A bad link gets a clear message.
 
 It needs a Chromium: `npx playwright-core install chromium`, or set `CHROMIUM_PATH`.
