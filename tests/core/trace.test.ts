@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initPhysics, runSim, type Contact, type Deviation, type PartTrack, type SimResult } from "../../src/core/sim.js";
 import { analyze, finaleTriggeredWithoutPush } from "../../src/core/trace.js";
-import { droppedOnFinale, dudMachine, goldenDominoes, lateRoller, lazyRoll, neighbourBalls, shortChain, slidingBucket } from "../fixtures/golden.js";
+import { droppedOnFinale, dudMachine, goldenDominoes, lateRoller, lazyRoll, neighbourBalls, shortChain, slidingBucket, twinOnlyHit } from "../fixtures/golden.js";
 
 type Spans = [number, number][];
 const touch = (a: string, b: string, from: number, to = from + 5): Contact => (a < b ? { a, b, from, to } : { a: b, b: a, from, to });
@@ -12,13 +12,14 @@ const track = (moved: boolean, minDistToFinale = 5, endY = 0.5): PartTrack => ({
 const devFrom = (moving: Record<string, Spans>): Record<string, Deviation> =>
   Object.fromEntries(Object.entries(moving).map(([id, spans]) => {
     const onset = spans.map(([start]) => start).find((start) => start >= 0) ?? null;
-    return [id, { onset, visible: onset }];
+    return [id, { onset, visible: onset, moved: onset }];
   }));
-const dev = (onset: number | null, visible: number | null = onset): Deviation => ({ onset, visible });
+const dev = (onset: number | null, visible: number | null = onset, moved: number | null = visible): Deviation => ({ onset, visible, moved });
 const sim = (
   contacts: Contact[], moving: Record<string, Spans>, parts: Record<string, PartTrack> = {}, deviation: Record<string, Deviation> = {},
+  twinContacts: Contact[] = [],
 ): SimResult => ({
-  events: [], contacts, moving,
+  events: [], contacts, moving, twinContacts,
   parts: { ...Object.fromEntries(Object.entries(moving).map(([id, spans]) => [id, track(spans.length > 0)])), ...parts },
   deviation: { ...devFrom(moving), ...deviation },
   finaleHit: null, steps: 1200, hash: "test", engine: "test",
@@ -127,6 +128,28 @@ describe("analyze (hand-built traces)", () => {
     // Without the push, b2 would have been knocked over at step 125; with it, the chain reaches it at 138. The push only delayed it.
     const r = analyze(goldenDominoes, sim([touch("b1", "b2", 138)], { b1: [[0, 200]], b2: [[138, 150]] }, {}, { b2: dev(125, 136) }));
     expect(r.chain).toEqual(["b1"]);
+  });
+
+  it("does not credit a part the push only kept from being hit: the gap opens but the part never moves", () => {
+    // In the push-free twin a spare ball hits d1 at step 50; with the push it doesn't, so d1 stays put beside b1.
+    const r = analyze(goldenDominoes, sim([touch("b1", "d1", 40, 200)], { b1: [[0, 45]], d1: [] }, {}, { d1: dev(50, 55, null) }));
+    expect(r.chain).toEqual(["b1"]);
+  });
+
+  it("does not credit a gap that starts with a touch only the push-free twin had", () => {
+    const r = analyze(
+      goldenDominoes,
+      sim([touch("b1", "d1", 40, 200)], { b1: [[0, 45]], d1: [[50, 90]] }, {}, { d1: dev(50) }, [touch("b9", "d1", 50, 60)]),
+    );
+    expect(r.chain).toEqual(["b1"]);
+  });
+
+  it("still credits a part when the twin has the same touch at the same time", () => {
+    const r = analyze(
+      goldenDominoes,
+      sim([touch("b1", "d1", 50, 60)], { b1: [[0, 60]], d1: [[50, 90]] }, {}, { d1: dev(50) }, [touch("b1", "d1", 51, 60)]),
+    );
+    expect(r.chain).toEqual(["b1", "d1"]);
   });
 
   it("only extends the chain when the touch moves the part off its push-free path", () => {
@@ -254,9 +277,16 @@ describe("analyze (real physics)", () => {
     expect(r.joinedAt.k1).toBeGreaterThanOrEqual(r.joinedAt.s1!);
   });
 
+  it("gives no chain credit for motion only the push-free twin makes (review repro)", () => {
+    // The push sends b1 away before d5 can topple into d3 and d7, so in the pushed run they barely move; only the twin hits them.
+    const r = analyze(twinOnlyHit, runSim(twinOnlyHit));
+    expect(r.chain).not.toContain("d7");
+    expect(Object.keys(r.joinedAt)).not.toContain("d7");
+  });
+
   it("gives no chain credit for motion the push-free twin makes too", () => {
     const r = analyze(lateRoller, runSim(lateRoller));
-    expect(runSim(lateRoller).deviation.b2).toEqual({ onset: null, visible: null }); // the spare ball rolls the same either way
+    expect(runSim(lateRoller).deviation.b2).toEqual({ onset: null, visible: null, moved: null }); // the spare ball rolls the same either way
     expect(Object.keys(r.joinedAt)).not.toContain("b2");
   });
 });

@@ -26,12 +26,21 @@ export interface Contact {
   to: number;
 }
 
-/** How far the first push moved a part off the path it takes in the push-free twin run. */
+/**
+ * How far the first push moved a part off the path it takes in the push-free twin run. Distances are bounded, not
+ * exact: the gap in position plus the gap in angle times the part's radius, which is at least how far its farthest
+ * point is off.
+ */
 export interface Deviation {
-  /** First step at which some point of the part is at least DEVIATION_ONSET from its push-free pose, or null. */
+  /** First step at which the part is at least DEVIATION_ONSET from its push-free pose, or null. */
   onset: number | null;
-  /** First step at which that distance reaches DEVIATION_VISIBLE, or null. */
+  /** First step at which that gap reaches DEVIATION_VISIBLE, or null. */
   visible: number | null;
+  /**
+   * First step at which the part has itself moved DEVIATION_VISIBLE in the pushed run since its onset, or null. A part
+   * the push merely kept still (the twin gets hit, the pushed run doesn't) opens a gap without moving, and never gets this.
+   */
+  moved: number | null;
 }
 
 /** Poses of the dynamic parts after every step, for drawing a run. */
@@ -62,6 +71,8 @@ export interface SimResult {
   moving: Record<string, [number, number][]>;
   /** Dynamic parts only, for a pushed run: how the push changed each part's path. Empty for a push-free run. */
   deviation: Record<string, Deviation>;
+  /** Contact intervals in the push-free twin (empty for a push-free run), to tell a gap the push opened from one the twin opened. */
+  twinContacts: Contact[];
   /** Only when SimOptions.record is set. */
   frames?: Frames;
 }
@@ -123,6 +134,44 @@ function buildWorld(bodies: Body[]): BuiltWorld {
   return { world, queue, rigid, nameOf };
 }
 
+/** Turns a world's collision events into contact intervals between named things (the floor excluded). */
+class ContactLog {
+  readonly contacts: Contact[] = [];
+  readonly raw: SimEvent[] = [];
+  private readonly open = new Map<string, { contact: Contact; count: number }>();
+
+  constructor(private readonly nameOf: Map<number, string>, private readonly steps: number) {}
+
+  drain(queue: EventQueue, step: number, onStart?: (a: string, b: string) => void): void {
+    queue.drainCollisionEvents((h1, h2, started) => {
+      const n1 = this.nameOf.get(h1);
+      const n2 = this.nameOf.get(h2);
+      if (n1 === undefined || n2 === undefined || n1 === n2 || n1 === "floor" || n2 === "floor") return;
+      const [a, b] = n1 < n2 ? [n1, n2] : [n2, n1];
+      const key = `${a}|${b}`;
+      if (started) {
+        this.raw.push({ step, a, b });
+        onStart?.(a, b);
+        const o = this.open.get(key);
+        if (o) o.count++;
+        else {
+          const contact: Contact = { a, b, from: step, to: this.steps };
+          this.contacts.push(contact);
+          this.open.set(key, { contact, count: 1 });
+        }
+      } else {
+        const o = this.open.get(key);
+        if (!o) return;
+        o.count--;
+        if (o.count === 0) {
+          o.contact.to = step;
+          this.open.delete(key);
+        }
+      }
+    });
+  }
+}
+
 /** Angle difference folded into (-π, π]. */
 function angleGap(a: number, b: number): number {
   const d = (a - b) % (2 * Math.PI);
@@ -136,9 +185,12 @@ function angleGap(a: number, b: number): number {
 export function runSim(bp: Blueprint, steps = SIM_STEPS, options: SimOptions = {}): SimResult {
   const push = options.push ?? true;
   const bodies = blueprintBodies(bp);
-  const main = buildWorld(bodies);
-  const twin = push ? buildWorld(bodies) : null;
+  const built: BuiltWorld[] = [];
   try {
+    const main = buildWorld(bodies);
+    built.push(main);
+    const twin = push ? buildWorld(bodies) : null;
+    if (twin) built.push(twin);
     const { world, queue, rigid, nameOf } = main;
     const finale = bodies.find((b) => b.id === "finale")!;
     const pushed = rigid.get(bp.firstPush.ball)!;
@@ -149,12 +201,12 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS, options: SimOptions = {
     const movingFlags = new Map<string, boolean[]>(dynamicIds.map((id) => [id, []]));
     const minDist = new Map<string, number>(dynamicIds.map((id) => [id, Infinity]));
     const start = new Map<string, { x: number; y: number }>();
-    const raw: { step: number; a: string; b: string }[] = [];
     let finaleHit = null as SimResult["finaleHit"];
-    const open = new Map<string, { contact: Contact; count: number }>();
-    const contacts: Contact[] = [];
+    const log = new ContactLog(nameOf, steps);
+    const twinLog = twin ? new ContactLog(twin.nameOf, steps) : null;
     const deviation: Record<string, Deviation> = {};
-    if (twin) for (const id of dynamicIds) deviation[id] = { onset: null, visible: null };
+    const anchor = new Map<string, { x: number; y: number; angle: number }>();
+    if (twin) for (const id of dynamicIds) deviation[id] = { onset: null, visible: null, moved: null };
 
     const total = SETTLE_STEPS + steps;
     const frames: Frames | undefined = options.record
@@ -187,33 +239,10 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS, options: SimOptions = {
       world.step(queue);
       if (twin) {
         twin.world.step(twin.queue);
-        twin.queue.drainCollisionEvents(() => {});
+        twinLog!.drain(twin.queue, step);
       }
-      queue.drainCollisionEvents((h1, h2, started) => {
-        const n1 = nameOf.get(h1);
-        const n2 = nameOf.get(h2);
-        if (n1 === undefined || n2 === undefined || n1 === n2 || n1 === "floor" || n2 === "floor") return;
-        const [a, b] = n1 < n2 ? [n1, n2] : [n2, n1];
-        const key = `${a}|${b}`;
-        if (started) {
-          raw.push({ step, a, b });
-          if (!finaleHit && (a === "finale" || b === "finale")) finaleHit = { step, by: a === "finale" ? b : a };
-          const o = open.get(key);
-          if (o) o.count++;
-          else {
-            const contact: Contact = { a, b, from: step, to: steps };
-            contacts.push(contact);
-            open.set(key, { contact, count: 1 });
-          }
-        } else {
-          const o = open.get(key);
-          if (!o) return;
-          o.count--;
-          if (o.count === 0) {
-            o.contact.to = step;
-            open.delete(key);
-          }
-        }
+      log.drain(queue, step, (a, b) => {
+        if (!finaleHit && (a === "finale" || b === "finale")) finaleHit = { step, by: a === "finale" ? b : a };
       });
       for (const id of dynamicIds) {
         const body = rigid.get(id)!;
@@ -224,19 +253,31 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS, options: SimOptions = {
           const t = body.translation();
           minDist.set(id, Math.min(minDist.get(id)!, Math.hypot(t.x - finale.x, t.y - finale.y)));
           const d = deviation[id];
-          if (twin && d && d.visible === null) {
-            const other = twin.rigid.get(id)!;
-            const u = other.translation();
-            // Bounds how far any point of the part is from where the push-free twin has it.
-            const gap = Math.hypot(t.x - u.x, t.y - u.y) + angleGap(body.rotation(), other.rotation()) * radius;
-            if (d.onset === null && gap >= DEVIATION_ONSET) d.onset = step;
-            if (gap >= DEVIATION_VISIBLE) d.visible = step;
+          if (twin && d && (d.visible === null || d.moved === null)) {
+            if (d.visible === null) {
+              const other = twin.rigid.get(id)!;
+              const u = other.translation();
+              // Bounds how far any point of the part is from where the push-free twin has it.
+              const gap = Math.hypot(t.x - u.x, t.y - u.y) + angleGap(body.rotation(), other.rotation()) * radius;
+              if (d.onset === null && gap >= DEVIATION_ONSET) {
+                d.onset = step;
+                anchor.set(id, { x: t.x, y: t.y, angle: body.rotation() });
+              }
+              if (gap >= DEVIATION_VISIBLE) d.visible = step;
+            }
+            const from = anchor.get(id);
+            if (from && d.moved === null) {
+              const travel = Math.hypot(t.x - from.x, t.y - from.y) + angleGap(body.rotation(), from.angle) * radius;
+              if (travel >= DEVIATION_VISIBLE) d.moved = step;
+            }
           }
         }
       }
       recordFrame(i + 1);
     }
 
+    const raw = log.raw;
+    const contacts = log.contacts;
     const events: SimEvent[] = raw.map((e) => ({ ...e }));
 
     const parts: Record<string, PartTrack> = {};
@@ -261,9 +302,13 @@ export function runSim(bp: Blueprint, steps = SIM_STEPS, options: SimOptions = {
       deviation: dynamicIds.filter((id) => deviation[id]).map((id) => [id, deviation[id]!.onset, deviation[id]!.visible]),
       end: dynamicIds.map((id) => [id, round(parts[id]!.end.x), round(parts[id]!.end.y)]),
     }));
-    return { events, parts, finaleHit, steps, hash, engine: ENGINE, contacts, moving, deviation, ...(frames ? { frames } : {}) };
+    return {
+      events, parts, finaleHit, steps, hash, engine: ENGINE, contacts, moving, deviation,
+      twinContacts: twinLog?.contacts ?? [],
+      ...(frames ? { frames } : {}),
+    };
   } finally {
-    for (const w of twin ? [main, twin] : [main]) {
+    for (const w of built) {
       w.queue.free();
       w.world.free();
     }

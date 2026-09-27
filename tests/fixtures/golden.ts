@@ -105,3 +105,23 @@ export const slidingBucket: Blueprint = {
     { id: "k1", kind: "bucket", col: 6, row: 7, fixed: false },
   ],
 };
+
+/**
+ * From review: the push changes what d5 does, so d5 only topples into d3 and d7 in the push-free twin. d3 and d7 open a
+ * large gap against their twins while barely moving in the pushed run. The first counterfactual rule credited them.
+ */
+export const twinOnlyHit: Blueprint = {
+  note: "r",
+  finale: { kind: "bell", label: "x", col: 13, row: 3 },
+  firstPush: { ball: "b1", direction: "left", strength: "hard" },
+  parts: [
+    { id: "b1", kind: "ball", col: 11, row: 6, size: "s" },
+    { id: "b2", kind: "ball", col: 7, row: 9, size: "s" },
+    { id: "d3", kind: "domino", col: 3, row: 5 },
+    { id: "s4", kind: "seesaw", col: 1, row: 9, length: 2 },
+    { id: "d5", kind: "domino", col: 4, row: 3 },
+    { id: "d6", kind: "domino", col: 4, row: 7 },
+    { id: "d7", kind: "domino", col: 2, row: 0 },
+    { id: "b8", kind: "bucket", col: 14, row: 7, fixed: false },
+  ],
+};

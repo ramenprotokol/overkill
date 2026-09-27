@@ -82,7 +82,8 @@ describe("runSim", () => {
 
   it("measures how far the push moved each part against a push-free twin stepped in lockstep", () => {
     const r = runSim(goldenDominoes);
-    expect(r.deviation.b1).toEqual({ onset: 0, visible: 0 });
+    expect(r.deviation.b1).toMatchObject({ onset: 0, visible: 0 });
+    expect(r.deviation.b1!.moved).toBeGreaterThanOrEqual(0);
     const hit = r.events.find((e) => e.a === "b1" && e.b === "d1")!;
     expect(r.deviation.d1!.onset).toBeGreaterThanOrEqual(hit.step - 2);
     expect(r.deviation.d1!.onset).toBeLessThanOrEqual(hit.step + 2);
@@ -91,11 +92,23 @@ describe("runSim", () => {
 
   it("leaves parts the push never reaches exactly on their push-free path", () => {
     const r = runSim(dudMachine);
-    for (const id of ["d1", "d2", "d3", "d4", "d5"]) expect(r.deviation[id]).toEqual({ onset: null, visible: null });
+    for (const id of ["d1", "d2", "d3", "d4", "d5"]) expect(r.deviation[id]).toEqual({ onset: null, visible: null, moved: null });
   });
 
-  it("has no twin, and so no deviation, for a push-free run", () => {
-    expect(runSim(goldenDominoes, undefined, { push: false }).deviation).toEqual({});
+  it("has no twin, and so no deviation or twin contacts, for a push-free run", () => {
+    const r = runSim(goldenDominoes, undefined, { push: false });
+    expect(r.deviation).toEqual({});
+    expect(r.twinContacts).toEqual([]);
+  });
+
+  it("logs the twin's contacts, which match a push-free run's", () => {
+    const pushed = runSim(goldenDominoes);
+    expect(pushed.twinContacts).toEqual(runSim(goldenDominoes, undefined, { push: false }).contacts);
+  });
+
+  it("marks when a part has itself moved 5 cm in the pushed run since the push first changed its path", () => {
+    const d1 = runSim(goldenDominoes).deviation.d1!;
+    expect(d1.moved).toBeGreaterThanOrEqual(d1.onset!);
   });
 
   it("records every dynamic part's pose after every step without changing the run", () => {

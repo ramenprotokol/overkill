@@ -37,6 +37,23 @@ export function finaleTriggeredWithoutPush(bp: Blueprint): boolean {
   return movingFinaleTouches(runSim(bp, undefined, { push: false })).length > 0;
 }
 
+/**
+ * Parts whose deviation began with a touch that happened only in the push-free twin: the push kept something from
+ * hitting them, so the gap isn't the push moving them.
+ */
+function twinOnlyOnsets(sim: SimResult): Set<string> {
+  const out = new Set<string>();
+  for (const c of sim.twinContacts) {
+    for (const y of [c.a, c.b]) {
+      const onset = sim.deviation[y]?.onset;
+      if (onset === null || onset === undefined || Math.abs(c.from - onset) > JOIN_SLACK) continue;
+      const alsoPushed = sim.contacts.some((p) => p.a === c.a && p.b === c.b && p.from <= c.from + JOIN_SLACK && p.to >= c.from - JOIN_SLACK);
+      if (!alsoPushed) out.add(y);
+    }
+  }
+  return out;
+}
+
 export type Outcome = "success" | "not_overkill" | "missed";
 
 export interface AttemptReport {
@@ -68,9 +85,12 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
 
   // Counterfactual attribution: the sim ran a push-free twin of the machine in lockstep, so a part's deviation onset
   // is the first step at which the push changed where it is. A part joins from a chain part it was touching at that
-  // moment (a fresh hit or a resting contact), and only if the push eventually moved it visibly. Movement the part
-  // would have made anyway (falling, rolling, settling) never counts, because the twin makes it too. The chain grows
-  // earliest-onset first; JOIN_SLACK absorbs contact-event timing and a load registering a step before its carrier.
+  // moment (a fresh hit or a resting contact), and only if the push eventually moved it visibly off its push-free
+  // path and it really moved in the pushed run. Movement the part would have made anyway (falling, rolling,
+  // settling) never counts, because the twin makes it too; nor does a gap the twin opened by getting hit where the
+  // pushed run didn't. The chain grows earliest-onset first; JOIN_SLACK absorbs contact-event timing and a load
+  // registering a step before its carrier.
+  const twinOnly = twinOnlyOnsets(sim);
   for (;;) {
     let next: { id: string; from: string; fromJoined: number; step: number } | null = null;
     for (const c of sim.contacts) {
@@ -78,7 +98,7 @@ export function analyze(bp: Blueprint, sim: SimResult): AttemptReport {
         const xJoined = joinedAt.get(x);
         if (xJoined === undefined || joinedAt.has(y)) continue;
         const d = sim.deviation[y];
-        if (!d || d.onset === null || d.visible === null) continue;
+        if (!d || d.onset === null || d.visible === null || d.moved === null || twinOnly.has(y)) continue;
         if (d.onset < c.from - JOIN_SLACK || d.onset > c.to + JOIN_SLACK || xJoined > d.onset + JOIN_SLACK) continue;
         const step = Math.max(d.onset, xJoined);
         const better = !next || step < next.step || (step === next.step && (y < next.id || (y === next.id && (xJoined < next.fromJoined || (xJoined === next.fromJoined && x < next.from)))));
