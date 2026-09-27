@@ -6,7 +6,7 @@ import "@fontsource/martian-mono/latin-400";
 import "./styles.css";
 import { parseBlueprint } from "../../src/core/blueprint.js";
 import { CHORES } from "../../src/spike/chores.js";
-import { SIM_STEPS } from "../../src/core/constants.js";
+import { MIN_CHAIN_PARTS, SIM_STEPS } from "../../src/core/constants.js";
 import type { AttemptReport } from "../../src/core/trace.js";
 import type { MachineFile, StoredAttempt } from "../../src/design/machines.js";
 import { Board, frameOfStep, stepOfFrame, type RunView } from "./board.js";
@@ -76,11 +76,14 @@ interface Route {
   problem?: string;
 }
 
-/** Reads #/<chore-id>/<revision>. Anything else falls back to the first sheet, with a message saying why. */
+/**
+ * Reads #/<chore-id>/<revision>. A hash that doesn't start with "#/" isn't a route (the skip link uses #sheet) and
+ * shows the first sheet; a route that doesn't match falls back to the first sheet with a message saying why.
+ */
 function route(hash: string): Route {
   const first = MACHINES[0]!;
   const fallback = (problem?: string): Route => ({ machine: first, rev: first.attempts.length, ...(problem ? { problem } : {}) });
-  if (hash === "" || hash === "#" || hash === "#/") return fallback();
+  if (!hash.startsWith("#/") || hash === "#/") return fallback();
   const m = /^#\/([a-z0-9-]{1,64})(?:\/(\d{1,3}))?$/.exec(hash);
   if (!m) return fallback(`That link doesn't point at a drawing in this set. Showing “${sentence(first.chore)}”.`);
   const machine = MACHINES.find((x) => x.id === m[1]);
@@ -103,11 +106,19 @@ function summary(m: MachineFile): string {
   return `No luck in ${n} revs`;
 }
 
+/** Rebuilds a list of links; if one of them had focus, the new link with the same address gets it back. */
+function replaceLinks(list: HTMLElement, items: HTMLElement[]): void {
+  const focused = document.activeElement instanceof HTMLAnchorElement && list.contains(document.activeElement) ? document.activeElement.getAttribute("href") : null;
+  list.replaceChildren(...items);
+  if (focused) list.querySelector<HTMLAnchorElement>(`a[href="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
+}
+
 function renderIndex(current: MachineFile): void {
   $("index-count").textContent = `${MACHINES.length} of ${CHORES.length} eval chores drawn`;
   const list = $("chores");
-  list.replaceChildren(
-    ...MACHINES.map((m) => {
+  replaceLinks(
+    list,
+    MACHINES.map((m) => {
       const li = make("li");
       const a = make("a", "chore");
       a.href = `#/${m.id}`;
@@ -124,14 +135,15 @@ function renderIndex(current: MachineFile): void {
 }
 
 function renderRevisions(m: MachineFile, rev: number): void {
-  $("revs").replaceChildren(
-    ...m.attempts.map((a) => {
+  replaceLinks(
+    $("revs"),
+    m.attempts.map((a) => {
       const li = make("li");
       const link = make("a", `rev rev-${a.outcome}`);
       link.href = `#/${m.id}/${a.attempt}`;
       if (a.attempt === rev) link.setAttribute("aria-current", "true");
-      const delta = make("span", "delta", String(a.attempt));
-      delta.setAttribute("aria-label", `Revision ${a.attempt}`);
+      const delta = make("span", "delta");
+      delta.append(make("span", "sr-only", "Revision "), String(a.attempt), make("span", "sr-only", ": "));
       const note = (a.input as { note?: unknown }).note;
       link.append(delta, make("span", "rev-outcome", OUTCOME[a.outcome]), make("span", "rev-note", typeof note === "string" ? note : "(no note)"));
       li.append(link);
@@ -192,6 +204,7 @@ async function show(r: Route): Promise<void> {
   const eng = await engine;
   if (my !== token) return;
   if (!eng) {
+    $("tb-checker").textContent = "Rapier 2D 0.21, deterministic build (couldn't run here)";
     ui.verify.textContent = engineError;
     sheet.dataset.state = "error";
     return;
@@ -223,7 +236,9 @@ async function show(r: Route): Promise<void> {
   board.show(bp, run, label);
   ui.verify.textContent = matches
     ? `Ran here in ${ms} ms. Trace ${hash} matches the run recorded in Node.`
-    : `Ran here, but the trace came out ${hash ?? "empty"} instead of the recorded ${attempt.hash ?? "none"}, so this device's run doesn't match the record.`;
+    : hash !== attempt.hash
+      ? `Ran here, but the trace came out ${hash ?? "empty"} instead of the recorded ${attempt.hash ?? "none"}, so this device's run doesn't match the record.`
+      : `Ran here with the recorded trace ${hash}, but the report came out different from the recorded one, so this page doesn't match the record.`;
   player.load(run.endFrame, reducedMotion.matches ? run.endFrame : 0);
   sheet.dataset.state = "ready";
   if (!reducedMotion.matches) player.play();
@@ -246,6 +261,7 @@ function showProgress(position: number): void {
   ui.chainSub.textContent = chainCaption(r, view!.machine.chore);
   const step = stepOfFrame(position);
   ui.clock.textContent = step < 0 ? "settling" : `${(step / 60).toFixed(2)} s`;
+  ui.scrub.setAttribute("aria-valuetext", step < 0 ? "settling, before the push" : `${(step / 60).toFixed(1)} seconds after the push`);
   const stampAt = r.success && r.finaleStep !== null ? frameOfStep(r.finaleStep) : run.endFrame;
   ui.stamp.classList.toggle("on", position >= stampAt);
   ui.scrub.value = String(Math.round(position));
@@ -256,7 +272,7 @@ function chainCaption(r: AttemptReport, chore: string): string {
   if (r.outcome === "missed") return `parts, then it stopped at ${r.stoppedAt ?? "the push"}`;
   if (r.summary.includes("even without the first push")) return "parts, but the finale gets hit without the push too";
   if (r.finaleHitBy !== null && r.joinedAt[r.finaleHitBy] === undefined) return `parts; ${r.finaleHitBy} hit the finale on its own`;
-  return "parts reached the finale; it takes 5";
+  return `parts reached the finale; it takes ${MIN_CHAIN_PARTS}`;
 }
 
 function showControls(): void {
@@ -265,7 +281,6 @@ function showControls(): void {
   ui.replay.disabled = !ready;
   ui.scrub.disabled = !ready;
   ui.play.textContent = player.playing ? "Pause" : "Play";
-  ui.play.setAttribute("aria-pressed", String(player.playing));
   ui.scrub.max = String(Math.max(1, player.end));
   ui.scrub.value = String(Math.round(player.position));
 }
@@ -279,9 +294,13 @@ ui.replay.addEventListener("click", () => {
 });
 ui.scrub.addEventListener("input", () => player.seek(Number(ui.scrub.value)));
 for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="speed"]')) {
+  if (radio.checked) player.speed = Number(radio.value);
   radio.addEventListener("change", () => {
     if (radio.checked) player.speed = Number(radio.value);
   });
 }
-window.addEventListener("hashchange", () => void show(route(location.hash)));
+window.addEventListener("hashchange", () => {
+  // In-page anchors such as the skip link aren't sheet changes.
+  if (location.hash.startsWith("#/")) void show(route(location.hash));
+});
 void show(route(location.hash));

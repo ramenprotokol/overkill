@@ -112,6 +112,30 @@ describe("built site", () => {
     await page.close();
   }, 60_000);
 
+  it("keeps the current sheet when the skip link is used, and focus on a revision link after following it", async () => {
+    const { page, problems } = await open({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    const m = machines.find((x) => x.attempts.length > 1)!;
+    await page.goto(`${server.url}/#/${m.id}/1`);
+    await page.waitForFunction(() => document.getElementById("sheet")!.dataset.state === "ready", undefined, { timeout: 30_000 });
+    const title = await page.title();
+    await page.keyboard.press("Tab");
+    expect(await page.evaluate(() => document.activeElement?.className)).toBe("skip");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => location.hash === "#sheet");
+    expect(await page.title()).toBe(title);
+    expect(await page.isHidden("#route-message")).toBe(true);
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe("sheet");
+
+    const href = `#/${m.id}/2`;
+    await page.focus(`a.rev[href="${href}"]`);
+    await page.evaluate(() => { document.getElementById("sheet")!.dataset.state = "stale"; });
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.getElementById("sheet")!.dataset.state === "ready", undefined, { timeout: 30_000 });
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("href"))).toBe(href);
+    expect(problems).toEqual([]);
+    await page.close();
+  }, 60_000);
+
   it("explains a link to a drawing that doesn't exist and shows the first sheet instead", async () => {
     const { page, problems } = await open();
     await page.goto(`${server.url}/#/not-a-chore`);

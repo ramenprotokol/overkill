@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OVERKILL · chain-reaction machines, checked by physics</title>
-    <meta name="description" content="Claude Opus 5.5 overengineers tiny chores as chain-reaction machines. Watch each one run in real physics, in your browser, with every failed attempt kept." />
+    <meta name="description" content="Chain-reaction machines for tiny chores, designed offline by Claude Opus 5.5. Each one runs in real physics in your browser, with every failed attempt kept." />
     <meta name="theme-color" content="#0e2b4e" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <script type="module" src="/src/main.ts"></script>
@@ -15,7 +15,7 @@
     <header class="masthead">
       <h1 class="wordmark">Overkill</h1>
       <div class="masthead-copy">
-        <p class="tagline">Claude overengineers your chores, then has to prove it works.</p>
+        <p class="tagline">Claude overengineered ten chores, then had to prove each machine works.</p>
         <p class="honesty">Machines designed offline by Claude Opus 5.5 using the same tools and checks. Live generation needs an API key and isn't running here.</p>
       </div>
     </header>
@@ -38,11 +38,11 @@
         <button id="replay" class="btn" type="button" disabled>Replay</button>
         <fieldset class="speed">
           <legend class="label">Speed</legend>
-          <label><input type="radio" name="speed" value="0.25" /><span>¼×</span></label>
-          <label><input type="radio" name="speed" value="0.5" /><span>½×</span></label>
-          <label><input type="radio" name="speed" value="1" checked /><span>1×</span></label>
-          <label><input type="radio" name="speed" value="2" /><span>2×</span></label>
-          <label><input type="radio" name="speed" value="4" /><span>4×</span></label>
+          <label><input type="radio" name="speed" value="0.25" autocomplete="off" /><span>¼×</span></label>
+          <label><input type="radio" name="speed" value="0.5" autocomplete="off" /><span>½×</span></label>
+          <label><input type="radio" name="speed" value="1" autocomplete="off" checked /><span>1×</span></label>
+          <label><input type="radio" name="speed" value="2" autocomplete="off" /><span>2×</span></label>
+          <label><input type="radio" name="speed" value="4" autocomplete="off" /><span>4×</span></label>
         </fieldset>
         <div class="scrub">
           <label class="label" for="scrub">Time</label>
@@ -81,7 +81,7 @@
         </div>
         <div class="tb-cell tb-checked">
           <span class="label">Checked by</span>
-          <span class="tb-value">Rapier 2D 0.21, deterministic build, in this browser</span>
+          <span class="tb-value" id="tb-checker">Rapier 2D 0.21, deterministic build, run in your browser</span>
           <span class="tb-sub" id="verify" role="status">Loading the physics engine…</span>
         </div>
       </aside>
@@ -89,7 +89,7 @@
         <h2 id="notes-title" class="label">General notes</h2>
         <ol>
           <li>Each sheet is one chore from the project's 20-chore eval set. Each revision is one real simulate call, and the report under it is word for word what the model would read back.</li>
-          <li>A part joins the chain when a chain part touches it and the push changes where it goes. The simulator runs every machine twice in lockstep, with and without the first push, and a part counts once it's at least 5 cm off its push-free path.</li>
+          <li>A part joins the chain when a chain part touches it and the push changes where it goes. The simulator runs every machine twice in lockstep, with and without the first push. A part counts once it's at least 5 cm off its push-free path and has itself moved at least 5 cm.</li>
           <li>A machine works only when a chain of at least 5 parts reaches the finale, and nothing reaches the finale when nobody pushes.</li>
           <li>Your browser re-runs every revision you open from its blueprint and checks the run's trace hash against the one recorded in Node. The balloons number the chain in order; the red pencil marks where each link happened.</li>
         </ol>

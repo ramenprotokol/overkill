@@ -175,10 +175,11 @@ export class Board {
         el("text", { x: clamp(x, 0.9, GRID_COLS - 0.9), y: y + 0.58, class: "red-label" }, g).textContent = "CHAIN STOPS";
       }
       if (report.closest) {
-        const near = closestFrame(frames, report.closest.part, fb, run.endFrame);
+        // The report's closest distance is over the whole run, so search the whole run; show it by the end of playback.
+        const near = closestFrame(frames, report.closest.part, fb, frames.count - 1);
         const p = near ? at(report.closest.part, near) : null;
         if (near && p) {
-          const g = this.timedGroup(Math.max(near, frameOfStep(0)), "dimension");
+          const g = this.timedGroup(Math.min(Math.max(near, frameOfStep(0)), run.endFrame), "dimension");
           dimension(g, rnd, p.x, sy(p.y), fb.x, sy(fb.y), `${report.closest.cells.toFixed(1)} m`);
         }
       }
