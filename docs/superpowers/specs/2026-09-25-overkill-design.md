@@ -160,7 +160,7 @@ A CLI running the real Opus + `preview` + `simulate` loop on the 20-chore set. N
 2. `blueprint`, `preview`, `sim`, `trace` with tests; SVG renderer.
 3. Run Durable Object loop, Worker API, budget, moderation, KV.
 4. Web: wager, live view, reel replay + verification, sabotage, gallery, budget-closed, OG image.
-5. Launch: Repo Audit Crew → public repo; README with eval, cost table, threat model, "decisions I rejected", public blueprint schema; launch clip recorded locally; `About overkill.md` in the vault; Proof Wall entry.
+5. Launch: privacy review → public repo; README with eval, cost table, threat model, "decisions I rejected", public blueprint schema; launch clip recorded locally; project note; Proof Wall entry.
 
 **Launch hook:** "I gave Claude Opus 5.5 a physics engine and 12 tries to turn off a light." + the failure reel.
 

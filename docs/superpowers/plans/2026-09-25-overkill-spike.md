@@ -12,14 +12,14 @@
 
 ## Global Constraints
 
-- Repo root: `~/RamenProtocol/overkill`. All commands run from there.
+- Repo root: the `overkill` checkout. All commands run from there.
 - Runtime: Node ≥ 22, `"type": "module"`. Relative imports in `.ts` files end in `.js` (NodeNext).
 - Exact pins (install with `-E`): `@dimforge/rapier2d-deterministic-compat@0.21.0`, `zod@4.6.5`, `@anthropic-ai/sdk@0.128.0`; dev: `typescript@7.0.2`, `vitest@5.0.2`, `tsx@4.23.15`, `@types/node@22`.
 - Model: `claude-opus-5-5`. Thinking is always on for this model: never send `thinking: {type: "disabled"}` or `budget_tokens` (400). Set `output_config.effort` explicitly (default `high`). Forced `tool_choice` (`any`/`tool`) is a 400 — use `{type: "auto", disable_parallel_tool_use: true}`.
 - Conversation history is **append-only**: never edit, trim or reorder earlier messages; always append `response.content` unchanged (it carries thinking blocks).
 - Board: 16 columns × 10 rows, row 0 = top, 1 cell = 1 metre. Max 25 parts. Success needs a chain of ≥ 5 parts. Default 12 attempts, 3 previews per attempt, 20 simulated seconds at 60 Hz.
 - Public copy says "chain-reaction machine" — never the cartoonist's name these machines are usually named after.
-- Identity and privacy: commits are made as `ramenprotokol` (repo-local config is already set — verify with `git config user.email`). The only API key the code reads is `RAMEN_ANTHROPIC_API_KEY`. Never read, print or log any other key. No personal names, emails, local paths or private details in code, comments, fixtures, docs or commit messages. Run `~/RamenProtocol/_ops/infra/privacy-check.sh` before every commit; it must pass.
+- Identity and privacy: commits are made as `ramenprotokol` (repo-local config is already set — verify with `git config user.email`). The only API key the code reads is `RAMEN_ANTHROPIC_API_KEY`. Never read, print or log any other key. No personal names, emails, local paths or private details in code, comments, fixtures, docs or commit messages. Run the owner's privacy check before every commit; it must pass.
 - Every commit message ends with a blank line and `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Never `git push`.
 
@@ -378,7 +378,7 @@ Expected: 9 tests PASS; typecheck exits 0.
 - [ ] **Step 10: Privacy gate and commit**
 
 ```bash
-git add -A && ~/RamenProtocol/_ops/infra/privacy-check.sh
+git add -A  # then run the owner's privacy check; it must pass
 git commit -m "feat: scaffold project and blueprint schema
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -652,7 +652,7 @@ Expected: 11 tests PASS; typecheck exits 0.
 - [ ] **Step 5: Privacy gate and commit**
 
 ```bash
-git add -A && ~/RamenProtocol/_ops/infra/privacy-check.sh
+git add -A  # then run the owner's privacy check; it must pass
 git commit -m "feat: add part geometry and overlap maths
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -842,7 +842,7 @@ Expected: 6 tests PASS; typecheck exits 0.
 - [ ] **Step 5: Privacy gate and commit**
 
 ```bash
-git add -A && ~/RamenProtocol/_ops/infra/privacy-check.sh
+git add -A  # then run the owner's privacy check; it must pass
 git commit -m "feat: add blueprint preview with overlap checks and ASCII board
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -1099,7 +1099,7 @@ If the golden-machine test fails, print `runSim(goldenDominoes).events` and fix 
 - [ ] **Step 6: Privacy gate and commit**
 
 ```bash
-git add -A && ~/RamenProtocol/_ops/infra/privacy-check.sh
+git add -A  # then run the owner's privacy check; it must pass
 git commit -m "feat: add deterministic physics run with trace fingerprint
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -1331,7 +1331,7 @@ Expected: all core tests PASS.
 - [ ] **Step 6: Privacy gate and commit**
 
 ```bash
-git add -A && ~/RamenProtocol/_ops/infra/privacy-check.sh
+git add -A  # then run the owner's privacy check; it must pass
 git commit -m "feat: add trace analyzer with the enforced overkill rule
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -1570,7 +1570,7 @@ Expected: 10 tests PASS; typecheck exits 0. If `Anthropic.Tool.InputSchema` is n
 - [ ] **Step 7: Privacy gate and commit**
 
 ```bash
-git add -A && ~/RamenProtocol/_ops/infra/privacy-check.sh
+git add -A  # then run the owner's privacy check; it must pass
 git commit -m "feat: add agent prompt, tool-result formatting and cost accounting
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -1936,7 +1936,7 @@ Expected: 12 tests PASS; typecheck exits 0. If the SDK types reject `output_conf
 - [ ] **Step 5: Privacy gate and commit**
 
 ```bash
-git add -A && ~/RamenProtocol/_ops/infra/privacy-check.sh
+git add -A  # then run the owner's privacy check; it must pass
 git commit -m "feat: add the append-only Opus 5.5 agent loop
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -2312,7 +2312,7 @@ Expected: every test in the repo PASSES (Tasks 1–8); typecheck exits 0.
 - [ ] **Step 9: Privacy gate and commit**
 
 ```bash
-git add -A && ~/RamenProtocol/_ops/infra/privacy-check.sh
+git add -A  # then run the owner's privacy check; it must pass
 git commit -m "feat: add the go/no-go spike CLI, summary report and README
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
