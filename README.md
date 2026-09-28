@@ -152,7 +152,7 @@ What counts toward the cap:
 
 - A finished reply: the usage the API reports.
 - A reply whose stream breaks or hits the 10-minute call timeout: the input and cache tokens reported when the stream started, plus a full 64k tokens of output. The real output count only arrives at the end of the stream, so the spike assumes the most it could have been.
-- A call that fails before the API reports any usage: nothing.
+- A call that fails before the API reports any usage: nothing. The SDK's automatic retries are turned off, so every request that reaches the API is one the cap checked; a rejected or dropped call ends that chore's run as an API error instead of being silently retried.
 
 A run cut off by the cap is reported separately. The verdict is marked provisional in any of these cases:
 

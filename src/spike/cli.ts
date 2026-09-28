@@ -43,8 +43,10 @@ async function main(): Promise<void> {
   // Every request goes to https://api.anthropic.com with the Ramen key as its only credential: ANTHROPIC_BASE_URL can't
   // redirect it, ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN and config-file profiles are never consulted (an explicit key
   // and a null auth token skip the SDK's credential lookup), and ANTHROPIC_CUSTOM_HEADERS can't add headers.
+  // The SDK's automatic retries (2 by default, on connection errors, 408/409/429 and 5xx) are off: a retried request
+  // is one the cost cap never checked, and one the API had already accepted could still bill its input tokens.
   delete process.env.ANTHROPIC_CUSTOM_HEADERS;
-  const client = new Anthropic({ apiKey, authToken: null, baseURL: "https://api.anthropic.com" });
+  const client = new Anthropic({ apiKey, authToken: null, baseURL: "https://api.anthropic.com", maxRetries: 0 });
 
   // Stream: replies can be long (max_tokens 64000 covers thinking), and streaming avoids HTTP timeouts. If the stream
   // dies midway, the SDK's usage snapshot (real input counts, output not yet reported) is handed to the adapter, which
