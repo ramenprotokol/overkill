@@ -29,3 +29,6 @@ results/
 # Design harness scratch (lock and temp files while a call runs)
 machines/*.lock
 machines/*.tmp
+
+# Agent state, browser-test output and local Cloudflare state — never commit
+ .claude/ .codex/ .specstory/ .playwright-mcp/ .playwright-cli/ test-results/ playwright-report/
